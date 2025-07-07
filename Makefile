@@ -13,7 +13,7 @@
 ######################################
 # target
 ######################################
-TARGET = stm32g0_led_test
+TARGET = bedside_weather
 
 
 ######################################
@@ -22,7 +22,7 @@ TARGET = stm32g0_led_test
 # debug build?
 DEBUG = 1
 # optimization
-OPT = -Og
+OPT = -O3
 
 
 #######################################
@@ -50,7 +50,9 @@ Core/Src/usart.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_dma.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_spi.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_pwr.c \
-Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_usart.c
+Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_usart.c \
+App/led/demo_img.c \
+App/led/led_driver.c
 
 # ASM sources
 ASM_SOURCES =  \
@@ -124,7 +126,8 @@ C_INCLUDES =  \
 -ICore/Inc \
 -IDrivers/STM32G0xx_HAL_Driver/Inc \
 -IDrivers/CMSIS/Device/ST/STM32G0xx/Include \
--IDrivers/CMSIS/Include
+-IDrivers/CMSIS/Include \
+-IApp
 
 
 # compile gcc flags

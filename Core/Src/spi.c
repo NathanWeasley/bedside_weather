@@ -83,13 +83,13 @@ void MX_SPI1_Init(void)
 
   LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_1, LL_DMA_MEMORY_INCREMENT);
 
-  LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_1, LL_DMA_PDATAALIGN_HALFWORD);
+  LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_1, LL_DMA_PDATAALIGN_BYTE);
 
-  LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_1, LL_DMA_PDATAALIGN_HALFWORD);
+  LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_1, LL_DMA_PDATAALIGN_BYTE);
 
   /* SPI1 interrupt Init */
-  // NVIC_SetPriority(SPI1_IRQn, 0);
-  // NVIC_EnableIRQ(SPI1_IRQn);
+  NVIC_SetPriority(SPI1_IRQn, 2);
+  NVIC_EnableIRQ(SPI1_IRQn);
 
   /* USER CODE BEGIN SPI1_Init 1 */
 
@@ -99,7 +99,7 @@ void MX_SPI1_Init(void)
   /* USER CODE END SPI1_Init 1 */
   SPI_InitStruct.TransferDirection = LL_SPI_FULL_DUPLEX;
   SPI_InitStruct.Mode = LL_SPI_MODE_MASTER;
-  SPI_InitStruct.DataWidth = LL_SPI_DATAWIDTH_16BIT;
+  SPI_InitStruct.DataWidth = LL_SPI_DATAWIDTH_8BIT;
   SPI_InitStruct.ClockPolarity = LL_SPI_POLARITY_LOW;
   SPI_InitStruct.ClockPhase = LL_SPI_PHASE_1EDGE;
   SPI_InitStruct.NSS = LL_SPI_NSS_HARD_OUTPUT;
@@ -112,8 +112,8 @@ void MX_SPI1_Init(void)
   LL_SPI_EnableNSSPulseMgt(SPI1);
   /* USER CODE BEGIN SPI1_Init 2 */
 
-  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_1, led_get_txbuf_addr(), SPI1->DR, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, led_get_txbuf_size() / 2); ///< /2 for transfering halfwords
+  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_1, led_get_txbuf_addr(), (uint32_t)&(SPI1->DR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, led_get_txbuf_size());
   LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
   LL_SPI_Enable(SPI1);
   LL_SPI_EnableDMAReq_TX(SPI1);
