@@ -108,6 +108,13 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
+    ///< Process UART buffer
+
+
+    ///< Update display buffer
+    GPIOA->ODR ^= LL_GPIO_PIN_1;
+    led_update_img(g_test_img);
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

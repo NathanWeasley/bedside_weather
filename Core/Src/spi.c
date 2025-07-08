@@ -88,8 +88,8 @@ void MX_SPI1_Init(void)
   LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_1, LL_DMA_PDATAALIGN_BYTE);
 
   /* SPI1 interrupt Init */
-  NVIC_SetPriority(SPI1_IRQn, 2);
-  NVIC_EnableIRQ(SPI1_IRQn);
+  // NVIC_SetPriority(SPI1_IRQn, 2);
+  // NVIC_EnableIRQ(SPI1_IRQn);
 
   /* USER CODE BEGIN SPI1_Init 1 */
 
