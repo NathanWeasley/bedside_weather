@@ -4,8 +4,6 @@
 #include "stm32g0xx_ll_gpio.h"
 #include "config.h"
 
-extern const uint8_t g_test_img[];
-
 typedef struct
 {
     uint8_t * head;

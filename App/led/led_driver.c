@@ -63,15 +63,6 @@ void led_init()
         g_led_breakdown.slice[i].head = g_led_breakdown.slice[i].data;
         g_led_breakdown.slice[i].mid = g_led_breakdown.slice[i].head + LED_BUFFER_SIZE/2;
     }
-    ///< Debug
-    // g_led_breakdown.slice[0].data[4] = 0x7F;
-    // g_led_breakdown.slice[1].data[4] = 0xBF;
-    // g_led_breakdown.slice[2].data[4] = 0xDF;
-    // g_led_breakdown.slice[3].data[4] = 0xEF;
-    // g_led_breakdown.slice[4].data[4] = 0xF7;
-    // g_led_breakdown.slice[5].data[4] = 0xFB;
-    // g_led_breakdown.slice[6].data[4] = 0xFD;
-    // g_led_breakdown.slice[7].data[4] = 0xFE;
 
     for (i = 0; i < LED_COLOR_DEPTH; ++i)
     {
@@ -80,10 +71,6 @@ void led_init()
 
     g_current_bit = 0;
     g_current_tick_count = 0;
-
-    // /** load test image */
-
-    // led_update_img(g_test_img);
 
     /** Copy first slice */
 
@@ -103,6 +90,7 @@ void led_update_img(const uint8_t * pdata)
         slice_ptr = g_led_breakdown.slice[i].head;
         img_ptr = pdata;
 
+        ///< memset here will cause flicker
         // memset(slice_ptr, 0xFF, LED_BUFFER_SIZE);
 
         for (j = 0; j < LED_CNT; ++j, ++img_ptr)

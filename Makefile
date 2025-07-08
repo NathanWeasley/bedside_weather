@@ -51,8 +51,9 @@ Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_dma.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_spi.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_pwr.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_usart.c \
-App/led/demo_img.c \
-App/led/led_driver.c
+App/led/led_driver.c \
+App/graphics/demo_img.c \
+App/graphics/graphics.c
 
 # ASM sources
 ASM_SOURCES =  \
