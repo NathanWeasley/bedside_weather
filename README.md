@@ -32,12 +32,12 @@ The original firmware onboard automatically runs a test pattern of lighting all 
 
 Based on these observations, it's quite straight forward to calculate the update-per-frame as $40000 / 156 \approx 256$. This indicates the maximum grayscales this algorithm can reach is 8-bits. The only difference that in real BCM non-stopping update is not required, you do not need to update LEDs every tick, you only need to update 8 times at the correct timing.
 
-This is actually more reasonable than original BCM because managing data transfer at the correct timing brings additional complexity to the system. Transferring same data many many times costs nothing but power consumption, which is of least concern in an LED-orinted product. And by the non-stoppping clock signal we can conclude the original firmware utilizes SPI/I2S+DMA. DMA is set to circular mode with half-complete and transfer-complete events to implement a ping-pong update scheme.
+This is actually more reasonable than original BCM because managing data transfer at the correct timing brings additional complexity to the system. Transferring same data many many times costs nothing but power consumption, which is of least concern in an LED-orinted product. And by the non-stoppping clock signal we can conclude the original firmware utilizes I2S+DMA (SPI+DMA will result in small delays between each transfer). DMA is set to circular mode.
 
-The only issue with this design is its LAT output: Physically this signal comes from pin 16 of STM32G070KBU6, which is neither the NSS output of SPI, nor the WS output of I2S. Peripherals can be connected to this pin includes GPIO, Timers, USARTs and EVENTOUT.
+The only issue with this design is its LAT output: Physically this signal comes from pin 16 of STM32G070KBU6, which is neither the NSS output of SPI, nor the WS output of I2S. Peripherals can be connected to this pin includes GPIO, Timers, USARTs and EVENTOUT. The possible scheme is to start a separate timer that is synchronized to the transfer and provide LAT signal through output compare.
 
 ## Second step: Replicate LED driver
 
-Based on the hardware connections and the internal design, 
+Based on the hardware connections and the internal design, Since I'm unfamiliar with I2S I've decided to still go with SPI. 
 
 
