@@ -145,51 +145,34 @@ void SysTick_Handler(void)
   */
 void DMA1_Channel1_IRQHandler(void)
 {
-  /* USER CODE BEGIN DMA1_Channel1_IRQn 0 */
-  
-  // if (LL_DMA_IsActiveFlag_GI1(DMA1))
-  // {
-    if (LL_DMA_IsActiveFlag_HT1(DMA1))
-    {
-      // LL_DMA_ClearFlag_HT1(DMA1);
+  if (LL_DMA_IsActiveFlag_HT1(DMA1))
+  {
+    ///< Copy first half
+    led_next_tick();
+    led_copy_first_half();
+  }
 
-      ///< Copy first half
-      led_next_tick();
-      led_copy_first_half();
-    }
-    if (LL_DMA_IsActiveFlag_TC1(DMA1))
-    {
-      // LL_DMA_ClearFlag_TC1(DMA1);
+  if (LL_DMA_IsActiveFlag_TC1(DMA1))
+  {
+    while (LL_SPI_IsActiveFlag_BSY(SPI1));
 
+    ///< Send latch signal
+    LAT_H;
+    LAT_L;
 
+    ///< Reconfigure DMA
+    LL_SPI_DisableDMAReq_TX(SPI1);
+    LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
+    LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_1, led_get_txbuf_addr(), (uint32_t)&(SPI1->DR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+    LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, led_get_txbuf_size());
+    LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
+    LL_SPI_EnableDMAReq_TX(SPI1);
 
-      ///< Wait for the last byte to be transfered (to be optimized)
-      // while (!LL_SPI_IsActiveFlag_TXE(SPI1));
-      // while (!LL_SPI_IsActiveFlag_RXNE(SPI1));
-      while (LL_SPI_IsActiveFlag_BSY(SPI1));
+    ///< Copy last half
+    led_copy_last_half();
+  }
 
-      ///< Send latch signal
-      LAT_H;
-      LAT_L;
-
-      ///< Reconfigure DMA
-      LL_SPI_DisableDMAReq_TX(SPI1);
-      LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
-      LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_1, led_get_txbuf_addr(), (uint32_t)&(SPI1->DR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-      LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, led_get_txbuf_size());
-      LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
-      LL_SPI_EnableDMAReq_TX(SPI1);
-
-      ///< Copy last half
-      led_copy_last_half();
-    }
-
-    LL_DMA_ClearFlag_GI1(DMA1);
-  // }
-  /* USER CODE END DMA1_Channel1_IRQn 0 */
-  /* USER CODE BEGIN DMA1_Channel1_IRQn 1 */
-
-  /* USER CODE END DMA1_Channel1_IRQn 1 */
+  LL_DMA_ClearFlag_GI1(DMA1);
 }
 
 /**
@@ -197,12 +180,7 @@ void DMA1_Channel1_IRQHandler(void)
   */
 void DMA1_Channel2_3_IRQHandler(void)
 {
-  /* USER CODE BEGIN DMA1_Channel2_3_IRQn 0 */
-
-  /* USER CODE END DMA1_Channel2_3_IRQn 0 */
-  /* USER CODE BEGIN DMA1_Channel2_3_IRQn 1 */
-
-  /* USER CODE END DMA1_Channel2_3_IRQn 1 */
+  ;
 }
 
 /**
@@ -210,12 +188,7 @@ void DMA1_Channel2_3_IRQHandler(void)
   */
 void SPI1_IRQHandler(void)
 {
-  /* USER CODE BEGIN SPI1_IRQn 0 */
-
-  /* USER CODE END SPI1_IRQn 0 */
-  /* USER CODE BEGIN SPI1_IRQn 1 */
-
-  /* USER CODE END SPI1_IRQn 1 */
+  ;
 }
 
 /**
@@ -223,14 +196,5 @@ void SPI1_IRQHandler(void)
   */
 void USART1_IRQHandler(void)
 {
-  /* USER CODE BEGIN USART1_IRQn 0 */
-
-  /* USER CODE END USART1_IRQn 0 */
-  /* USER CODE BEGIN USART1_IRQn 1 */
-
-  /* USER CODE END USART1_IRQn 1 */
+  ;
 }
-
-/* USER CODE BEGIN 1 */
-
-/* USER CODE END 1 */
