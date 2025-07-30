@@ -36,3 +36,4 @@ void gfx_update_img(const uint8_t * pimg)
     ///< Debug only
     led_update_img(g_img_buf.data);
 }
+

@@ -12,3 +12,6 @@
 
 #define DEFAULT_BUFFER_SIZE (512)
 #define UART_BUFFER_SIZE    (1024)
+
+#define GFX_VPAINT_MAX_WIDTH    (500)
+#define GFX_VPAINT_MAX_HEIGHT   (32)
