@@ -4,6 +4,11 @@
 #include "stm32g0xx_ll_gpio.h"
 #include "config.h"
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 typedef struct
 {
     uint8_t * head;
@@ -24,3 +29,7 @@ uint32_t led_get_txbuf_size();
 void led_copy_first_half();
 void led_copy_last_half();
 void led_next_tick();
+
+#ifdef __cplusplus
+}
+#endif

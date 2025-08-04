@@ -73,7 +73,7 @@ int main(void)
 
     ///< Update display buffer
     GPIOA->ODR ^= LL_GPIO_PIN_1;
-    gfx_update_img(g_test_img);
+    // gfx_update_img(g_test_img);
   }
 
 }

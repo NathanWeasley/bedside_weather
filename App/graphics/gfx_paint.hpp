@@ -245,7 +245,11 @@ void draw_circle(uint16_t x, uint16_t y, uint16_t r, uint16_t color, uint8_t wid
 }
 
 
-
+template <typename T, typename = std::enable_if_t<is_Window_v<T>>>
+uint16_t draw_icon(uint16_t x, uint16_t y, uint16_t icon)
+{
+    if (icon >= )
+}
 
 
 

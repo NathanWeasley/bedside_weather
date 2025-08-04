@@ -35,7 +35,7 @@ BUILD_DIR = build
 # source
 ######################################
 # C sources
-C_SOURCES =  \
+C_SOURCES = \
 Core/Src/main.c \
 Core/Src/gpio.c \
 Core/Src/stm32g0xx_it.c \
@@ -52,12 +52,12 @@ Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_spi.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_pwr.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_usart.c \
 App/led/led_driver.c \
-App/graphics/demo_img.c \
-App/graphics/graphics.c
+App/graphics/demo_img.c 
 
 # CPP sources
 CPP_SOURCES = \
-App/graphics/animated.cpp
+App/graphics/gfx_api.cpp \
+App/tasks/test_task.cpp
 
 # ASM sources
 ASM_SOURCES =  \
@@ -124,6 +124,20 @@ C_DEFS =  \
 -DINSTRUCTION_CACHE_ENABLE=1 \
 -DDATA_CACHE_ENABLE=1
 
+CPP_DEFS = \
+-DUSE_FULL_LL_DRIVER \
+-DSTM32G070xx \
+-DHSE_VALUE=8000000 \
+-DHSE_STARTUP_TIMEOUT=100 \
+-DLSE_STARTUP_TIMEOUT=5000 \
+-DLSE_VALUE=32768 \
+-DEXTERNAL_CLOCK_VALUE=48000 \
+-DHSI_VALUE=16000000 \
+-DLSI_VALUE=32000 \
+-DVDD_VALUE=3300 \
+-DPREFETCH_ENABLE=1 \
+-DINSTRUCTION_CACHE_ENABLE=1 \
+-DDATA_CACHE_ENABLE=1
 
 # AS includes
 AS_INCLUDES = 
@@ -137,6 +151,10 @@ C_INCLUDES =  \
 -IApp
 
 CPP_INCLUDES = \
+-ICore/Inc \
+-IDrivers/STM32G0xx_HAL_Driver/Inc \
+-IDrivers/CMSIS/Device/ST/STM32G0xx/Include \
+-IDrivers/CMSIS/Include \
 -IApp
 
 # compile gcc flags
@@ -191,8 +209,6 @@ $(BUILD_DIR)/%.o: %.cpp Makefile | $(BUILD_DIR)
 	$(CXX) -c $(CXXFLAGS) $(CPP_DEFS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.cpp=.lst)) $< -o $@
 
 $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
-	$(AS) -c $(CFLAGS) $< -o $@
-$(BUILD_DIR)/%.o: %.S Makefile | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile

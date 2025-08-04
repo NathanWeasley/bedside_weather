@@ -2,6 +2,11 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #define LED_HEIGHT          (16)
 #define LED_WIDTH           (25)
 #define LED_COLOR_DEPTH     (8)
@@ -15,3 +20,7 @@
 
 #define GFX_VPAINT_MAX_WIDTH    (500)
 #define GFX_VPAINT_MAX_HEIGHT   (32)
+
+#ifdef __cplusplus
+}
+#endif

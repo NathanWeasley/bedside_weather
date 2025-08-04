@@ -1,4 +1,4 @@
-#include "graphics/graphics.h"
+#include "graphics/gfx_api.h"
 #include "led/led_driver.h"
 
 static const uint8_t    g_gamma_lut[LED_GRAYSCALE] =
