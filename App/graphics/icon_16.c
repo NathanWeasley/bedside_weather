@@ -22,7 +22,7 @@ static const icon_16_font_t g_font16 =
                 0xFF, 0xFF,
                 0xFF, 0xFF,
                 0xFF, 0xFF,
-            0xFF, 0xFF,
+                0xFF, 0xFF,
             }
         },
         {

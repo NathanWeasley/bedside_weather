@@ -3,10 +3,12 @@
 #include <stdint.h>
 
 #define ICON_5_HEIGHT      (5)
-#define ICON_5_MAX_WIDTH   (5)
+#define ICON_5_MAX_WIDTH   (8)
 #define ICON_5_WIDTH_BYTE  (ICON_5_MAX_WIDTH / 8 + ((ICON_5_MAX_WIDTH % 8) != 0))
 
-#define ICON_5_CNT         (20)
+#define ICON_5_CNT         (128)
+
+#define ICON_5_ASCII_BIAS  (' ')
 
 typedef struct
 {

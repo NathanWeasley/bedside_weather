@@ -3,7 +3,7 @@
 #include <cstdint>
 
 //Def
-#define myPeriodic 15 //in sec | Thingspeak pub is 15sec
+#define myPeriodic 30 //in sec | Thingspeak pub is 15sec
 
 // https://api.openweathermap.org/data/2.5/weather?q=Xi%E2%80%99an,CN&APPID=4da28fda20eca6cb0e9a8a6b5da9002d
 
@@ -11,11 +11,11 @@
 
 const char* server = "api.openweathermap.org";
 const String apiKey ="4da28fda20eca6cb0e9a8a6b5da9002d";
-const char* MY_SSID = "aerofugia"; 
-const char* MY_PWD = "Aero#33990";
+const char* MY_SSID = "ghq"; 
+const char* MY_PWD = "gghhqq1963";
 
 /** Global flags */
-uint8_t 
+//
 
 void setup()
 {
@@ -53,9 +53,9 @@ void sendTeperatureTS(float temp)
     WiFiClient client;
     
     if (client.connect(server, 80))
-    { // use ip 184.106.153.149 or api.thingspeak.com
-        Serial.println("WiFi Client connected ");
-        
+    {
+        Serial.println("WiFi Client connected.");
+        //https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API key}
         String postStr = apiKey;
         postStr += "&field1=";
         postStr += String(temp);
