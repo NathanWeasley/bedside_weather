@@ -136,11 +136,6 @@ public:
 
 
 
-// template <
-//     uint16_t CW, uint16_t CH,
-//     uint16_t WX, uint16_t WY, uint16_t WW, uint16_t WH,
-//     uint16_t MW, uint16_t MH, gfx_animate_method_e Method, uint16_t TPM, int16_t DELAY
-// >
 template <
     uint16_t MW, uint16_t MH, gfx_animate_method_e Method, uint16_t TPM,
     typename WD,

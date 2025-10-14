@@ -221,14 +221,14 @@ void draw_circle(uint16_t x, uint16_t y, uint16_t r, uint16_t color, uint8_t wid
     { //Draw a hollow circle
         while (XCurrent <= YCurrent)
         {
-            draw_pt<T>(x + XCurrent, y + YCurrent, color, width);//1
-            draw_pt<T>(x - XCurrent, y + YCurrent, color, width);//2
-            draw_pt<T>(x - YCurrent, y + XCurrent, color, width);//3
-            draw_pt<T>(x - YCurrent, y - XCurrent, color, width);//4
-            draw_pt<T>(x - XCurrent, y - YCurrent, color, width);//5
-            draw_pt<T>(x + XCurrent, y - YCurrent, color, width);//6
-            draw_pt<T>(x + YCurrent, y - XCurrent, color, width);//7
-            draw_pt<T>(x + YCurrent, y + XCurrent, color, width);//0
+            draw_pt<T>(x + XCurrent, y + YCurrent, color, width);   //1
+            draw_pt<T>(x - XCurrent, y + YCurrent, color, width);   //2
+            draw_pt<T>(x - YCurrent, y + XCurrent, color, width);   //3
+            draw_pt<T>(x - YCurrent, y - XCurrent, color, width);   //4
+            draw_pt<T>(x - XCurrent, y - YCurrent, color, width);   //5
+            draw_pt<T>(x + XCurrent, y - YCurrent, color, width);   //6
+            draw_pt<T>(x + YCurrent, y - XCurrent, color, width);   //7
+            draw_pt<T>(x + YCurrent, y + XCurrent, color, width);   //0
 
             if (Esp < 0)
             {
@@ -263,48 +263,6 @@ uint16_t draw_icon(uint16_t x, uint16_t y, uint16_t icon)
 
 
 #if 0
-
-// template <typename T, typename = std::enable_if_t<is_Window_v<T>>>
-// void draw_char(uint16_t x, uint16_t y, const char ascii, sFONT* font, uint8_t color)
-// {
-//     uint16_t Page, Column;
-
-//     if (x >= T::width() || y >= T::height())
-//     {
-//         return;
-//     }
-
-//     uint32_t Char_Offset = (ascii - ' ') * font->Height * (font->Width / 8 + (font->Width % 8 ? 1 : 0));
-//     const unsigned char *ptr = &font->table[Char_Offset];
-
-//     for (Page = 0; Page < font->Height; Page ++ ) {
-//         for (Column = 0; Column < font->Width; Column ++ ) {
-
-//             //To determine whether the font background color and screen background color is consistent
-//             if (FONT_BACKGROUND == Color_Background) { //this process is to speed up the scan
-//                 if (*ptr & (0x80 >> (Column % 8)))
-//                     draw_px<T>(x + Column, y + Page, Color_Foreground);
-//                     // Paint_DrawPoint(x + Column, y + Page, Color_Foreground, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-//             } else {
-//                 if (*ptr & (0x80 >> (Column % 8))) {
-//                     Paint_SetPixel(x + Column, y + Page, Color_Foreground);
-//                     // Paint_DrawPoint(x + Column, y + Page, Color_Foreground, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-//                 } else {
-//                     Paint_SetPixel(x + Column, y + Page, Color_Background);
-//                     // Paint_DrawPoint(x + Column, y + Page, Color_Background, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-//                 }
-//             }
-//             //One pixel is 8 bits
-//             if (Column % 8 == 7)
-//                 ptr++;
-//         }// Write a line
-//         if (font->Width % 8 != 0)
-//             ptr++;
-//     }// Write all
-// }
-
-
-
 
 template <typename T>
 static inline void dump(const char * path)

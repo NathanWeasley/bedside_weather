@@ -21,19 +21,25 @@ static const uint8_t    g_gamma_lut[LED_GRAYSCALE] =
     215, 218, 220, 223, 225, 228, 231, 233, 236, 239, 241, 244, 247, 249, 252, 255
 };
 
-static gfx_img_t    g_img_buf;
+// static gfx_img_t    g_img_buf;
 
-void gfx_update_img(const uint8_t * pimg)
+void gfx_update_img(uint8_t * pmem, const uint8_t * pimg)
 {
     uint16_t i;
 
+    if (!pmem)
+    {
+        return;
+    }
+
     for (i = 0; i < LED_CNT; ++i)
     {
-        g_img_buf.data[i] = g_gamma_lut[*pimg];
+        pmem[i] = g_gamma_lut[*pimg];
         ++pimg;
+        ++pmem;
     }
 
     ///< Debug only
-    led_update_img(g_img_buf.data);
+    led_update_img(pmem);
 }
 
