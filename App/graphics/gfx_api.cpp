@@ -25,14 +25,12 @@ static const uint8_t    g_gamma_lut[LED_GRAYSCALE] =
 
 void gfx_update_img(uint8_t * pmem, const uint8_t * pimg)
 {
-    uint16_t i;
-
-    if (!pmem)
+    if (!pmem || !pimg)
     {
         return;
     }
 
-    for (i = 0; i < LED_CNT; ++i)
+    for (uint16_t i = 0; i < LED_CNT; ++i)
     {
         pmem[i] = g_gamma_lut[*pimg];
         ++pimg;

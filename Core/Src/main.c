@@ -20,8 +20,11 @@
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
+#include "timer.h"
 
 /* Private includes ----------------------------------------------------------*/
+
+#include "tasks/test_task.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -63,13 +66,15 @@ int main(void)
   MX_SPI1_Init();
   // MX_USART1_UART_Init();
 
+  test_task_init(0);
+
   OE_L;
   LAT_L;
 
   while (1)
   {
     ///< Process UART buffer
-
+    test_task_tick();
 
     ///< Update display buffer
     GPIOA->ODR ^= LL_GPIO_PIN_1;

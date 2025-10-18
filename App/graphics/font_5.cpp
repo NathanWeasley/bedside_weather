@@ -1,4 +1,4 @@
-#include "graphics/icon_5.h"
+#include "graphics/font_5.h"
 
 /**
  * Total 95 ASCII characters
@@ -11,9 +11,8 @@
  * pqrstuvwxyz{|}~
 */
 
-static const icon_5_font_t g_font5 =
+const Font5 font5_table = 
 {
-    ICON_5_HEIGHT,
     {
         { 4, { 0x00, 0x00, 0x00, 0x00, 0x00, } },       ///< ' '
         { 4, { 0x40, 0x40, 0x40, 0x00, 0x40, } },       ///< '!'
@@ -115,6 +114,29 @@ static const icon_5_font_t g_font5 =
         { 4, { 0x60, 0x40, 0xC0, 0x40, 0x60, } },       ///< '{'
         { 4, { 0x40, 0x40, 0x40, 0x40, 0x40, } },       ///< '|'
         { 4, { 0xC0, 0x40, 0x60, 0x40, 0xC0, } },       ///< '}'
-        { 5, { 0x00, 0x50, 0xA0, 0x00, 0x00, } },       ///< '~'
+        { 5, { 0x00, 0x50, 0xA0, 0x00, 0x00, } }        ///< '~'
     }
 };
+
+// void font_5_init(font_t * font)
+// {
+//     if (!font)
+//     {
+//         return;
+//     }
+
+//     font->height = FONT_5_HEIGHT;
+//     font->width = 0;
+//     font->width_fixed = 0;
+//     font->count = FONT_5_CNT;
+//     font->ascii_bias = FONT_5_ASCII_BIAS;
+//     font->glyphs = (void *)font5_table;
+// }
+
+
+
+
+
+
+
+

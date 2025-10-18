@@ -22,6 +22,7 @@ extern "C"
 
 // const char url[] = API_FULL_URL;
 
+
 uint32_t test_task_param_size();
 void test_task_init(task_param_t * param);
 void test_task_tick();

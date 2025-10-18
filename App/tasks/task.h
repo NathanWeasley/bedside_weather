@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#define TASK_SCHEDULE_FREQ      (50)
+
 typedef struct
 {
     uint16_t presc;

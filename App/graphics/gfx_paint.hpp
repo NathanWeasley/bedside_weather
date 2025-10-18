@@ -1,6 +1,7 @@
 #pragma once
 
-#include "gfx_animated.hpp"
+#include "graphics/gfx_animated.hpp"
+#include "graphics/gfx_fonts.h"
 
 namespace gfx
 {
@@ -244,12 +245,171 @@ void draw_circle(uint16_t x, uint16_t y, uint16_t r, uint16_t color, uint8_t wid
     }
 }
 
-
-template <typename T, typename = std::enable_if_t<is_Window_v<T>>>
-uint16_t draw_icon(uint16_t x, uint16_t y, uint16_t icon)
+template <typename T, typename F, typename = std::enable_if_t<is_Window_v<T>>>
+uint16_t draw_char(uint16_t x, uint16_t y, const char ch_ascii,
+                   const F& ft, uint16_t color_fg, int16_t color_bg = -1)
 {
-    if (icon >= )
+    static_assert(is_Font_v<F>, "Unsupported font type!");
+
+    if (x > T::width() || y > T::height())
+    {
+        return x;
+    }
+
+    uint8_t ch_idx = ch_ascii - F::ascii_bias();
+    // const auto& ch_bmp = ft.glyphs[ch_idx];
+    const uint8_t * ptr = ft.data(ch_idx);
+
+    for (uint16_t Row = 0; Row < ft.height(); ++Row)
+    {
+        const uint8_t * rptr = ptr + ft.widthByte() * Row;
+
+        for (uint16_t Column = 0; Column < ft.width(ch_idx); ++Column)
+        {
+            // To determine whether the font background color and screen background color is consistent
+            if (color_bg < 0)
+            {
+                // this process is to speed up the scan
+                if (*rptr & (0x80 >> (Column % 8)))
+                {
+                    draw_px<T>(x + Column, y + Row, color_fg);
+                    // Paint_DrawPoint(x + Column, y + Row, color_fg, DOT_PIXEL_DFT, DOT_STYLE_DFT);
+                }
+            }
+            else
+            {
+                if (*rptr & (0x80 >> (Column % 8)))
+                {
+                    draw_px<T>(x + Column, y + Row, color_fg);
+                    // Paint_DrawPoint(x + Column, y + Row, color_fg, DOT_PIXEL_DFT, DOT_STYLE_DFT);
+                }
+                else
+                {
+                    draw_px<T>(x + Column, y + Row, color_bg);
+                    // Paint_DrawPoint(x + Column, y + Row, color_bg, DOT_PIXEL_DFT, DOT_STYLE_DFT);
+                }
+            }
+            // One pixel is 8 bits
+            if (Column % 8 == 7)
+            {
+                rptr++;
+            }
+        } // Write a line
+    } // Write all
+
+    return x + ft.width(ch_idx);
 }
+
+template <typename T, typename F, typename = std::enable_if_t<is_Window_v<T>>>
+uint16_t draw_string(uint16_t x, uint16_t y, const char * str,
+                 const F& ft, uint16_t color_fg, int16_t color_bg = -1)
+{
+    static_assert(is_Font_v<F>, "Unsupported font type!");
+
+    uint16_t Xpoint = x;
+    uint16_t Ypoint = y;
+
+    if (x > T::width() || y > T::height())
+    {
+        return x;
+    }
+
+    while (*str != '\0')
+    {
+        uint8_t ch_idx = *str - F::ascii_bias();
+
+        //if X direction overflowed, reposition to (x,Ypoint), Ypoint is Y direction plus the Height of the character
+        if (Xpoint + ft.width(ch_idx) > T::width())
+        {
+            Xpoint = x;
+            Ypoint += ft.height();
+        }
+
+        // If Y direction overflowed, reposition to (x, y)
+        if (Ypoint + ft.height() > T::height())
+        {
+            Xpoint = x;
+            Ypoint = y;
+        }
+
+        Xpoint += draw_char<T, F>(Xpoint, Ypoint, *str, ft, color_bg, color_fg);
+
+        //The next character of the address
+        ++str;
+
+        //The next word of the abscissa increases the font of the broadband
+        Xpoint += ft.width(ch_idx);
+    }
+
+    return Xpoint;
+}
+
+template <typename T, typename F, typename = std::enable_if_t<is_Window_v<T>>>
+uint16_t draw_number(uint16_t x, uint16_t y, int32_t num,
+                     const F& ft, uint16_t color_fg, int16_t color_bg = -1)
+{
+    static_assert(is_Font_v<F>, "Unsupported font type!");
+
+    if (x > T::width() || y > T::height())
+    {
+        return x;
+    }
+
+    static constexpr uint32_t __array_len = 128;
+
+    int16_t Num_Bit = 0, Str_Bit = 0;
+    uint8_t Str_Array[__array_len] = {0}, Num_Array[__array_len] = {0};
+    uint8_t *pStr = Str_Array;
+    uint8_t neg;
+
+    neg = num < 0;
+    if (neg)
+    {
+        num = -num;
+    }
+
+    // Converts a number to a string
+    do
+    {
+        Num_Array[Num_Bit] = num % 10 + '0';
+        ++Num_Bit;
+        num /= 10;
+    } while (num);
+    
+    // Adds minus sign if number is negative
+    if (neg)
+    {
+        Str_Array[0] = '-';
+        ++Str_Bit;
+    }
+
+    // The string is inverted
+    while (Num_Bit > 0)
+    {
+        Str_Array[Str_Bit] = Num_Array[Num_Bit - 1];
+        ++Str_Bit;
+        --Num_Bit;
+    }
+
+    return draw_string<T, F>(x, y, (const char*)pStr, ft, color_fg, color_bg);
+}
+
+// template <typename T, typename = std::enable_if_t<is_Window_v<T>>>
+// void draw_bitmap(const uint8_t* image_buffer)
+// {
+//     uint16_t x, y;
+//     uint32_t Addr = 0;
+
+
+
+//     for (y = 0; y < Paint.HeightByte; y++) {
+//         for (x = 0; x < Paint.WidthByte; x++) {//8 pixel =  1 byte
+//             Addr = x + y * Paint.WidthByte;
+//             Paint.Image[Addr] = (unsigned char)image_buffer[Addr];
+//         }
+//     }
+// }
+
 
 
 
