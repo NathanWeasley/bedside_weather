@@ -68,6 +68,8 @@ struct Window
     static auto canvas() { return Canvas<CW, CH>{}; }
     static uint8_t * data() { return _ptr0; }
     // static constexpr uint32_t size() { return __csize; }
+    static constexpr uint16_t x() { return __wx0; }
+    static constexpr uint16_t y() { return __wy0; }
     static constexpr uint16_t width() { return __wwidth; }
     static constexpr uint16_t height() { return __wheight; }
 };
@@ -223,6 +225,8 @@ struct Mask
         }
     }
 
+    static constexpr inline uint16_t x() { return WD::x(); }
+    static constexpr inline uint16_t y() { return WD::y(); }
     static constexpr inline uint16_t width() { return __mwidth; }
     static constexpr inline uint16_t height() { return __mheight; }
     static inline auto window() { return WD{}; }
@@ -255,10 +259,10 @@ struct Display
     static constexpr inline uint8_t * data() { return PTR; }
 };
 
-template <typename M, uint16_t MX, uint16_t MY, typename Display, typename = std::enable_if<is_Mask_v<M>>>
+template <typename M, typename Display, typename = std::enable_if<is_Mask_v<M>>>
 struct DisplayZone
 {
-    static constexpr uint8_t * __ptr0 = Display::data() + MX + MY * Display::width();
+    static constexpr uint8_t * __ptr0 = Display::data() + M::x() + M::y() * Display::width();
 
     static constexpr inline uint8_t * ptr() { return __ptr0; }
     static constexpr inline uint16_t width() { return M::width(); }
@@ -275,6 +279,23 @@ struct DisplayZone
         {
             m.get_line(i, ptr);
             ptr += Display::width();
+        }
+    }
+
+    template <typename Mask>
+    inline void tick_then_update(Mask&& m)
+    {
+        static_assert(width() == m.width() && height() == m.height(),
+            "Mask and Zone must not differ in size!");
+
+        if (m.tick())
+        {
+            uint8_t * ptr = __ptr0;
+            for (uint16_t i = 0; i < height(); ++i)
+            {
+                m.get_line(i, ptr);
+                ptr += Display::width();
+            }
         }
     }
 };

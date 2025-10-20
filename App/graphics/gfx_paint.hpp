@@ -317,9 +317,10 @@ uint16_t draw_string(uint16_t x, uint16_t y, const char * str,
     while (*str != '\0')
     {
         uint8_t ch_idx = *str - F::ascii_bias();
+        uint16_t ch_width = ft.width(ch_idx);
 
         //if X direction overflowed, reposition to (x,Ypoint), Ypoint is Y direction plus the Height of the character
-        if (Xpoint + ft.width(ch_idx) > T::width())
+        if (Xpoint + ch_width > T::width())
         {
             Xpoint = x;
             Ypoint += ft.height();
@@ -332,13 +333,13 @@ uint16_t draw_string(uint16_t x, uint16_t y, const char * str,
             Ypoint = y;
         }
 
-        Xpoint += draw_char<T, F>(Xpoint, Ypoint, *str, ft, color_bg, color_fg);
+        Xpoint = draw_char<T, F>(Xpoint, Ypoint, *str, ft, color_fg, color_bg);
 
         //The next character of the address
         ++str;
 
-        //The next word of the abscissa increases the font of the broadband
-        Xpoint += ft.width(ch_idx);
+        // //The next word of the abscissa increases the font of the broadband
+        // Xpoint += ft.width(ch_idx);
     }
 
     return Xpoint;
