@@ -58,7 +58,8 @@ App/graphics/demo_img.c
 CPP_SOURCES = \
 App/graphics/gfx_api.cpp \
 App/graphics/font_5.cpp \
-App/tasks/test_task.cpp
+App/tasks/test_task.cpp \
+App/tasks/comm_task.cpp
 
 # ASM sources
 ASM_SOURCES =  \

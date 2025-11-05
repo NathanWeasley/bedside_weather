@@ -7,7 +7,7 @@ extern "C"
 {
 #endif
 
-uint32_t comm_task_param_size();
+// uint32_t comm_task_param_size();
 
 void comm_task_init(task_param_t * param);
 void comm_task_tick();

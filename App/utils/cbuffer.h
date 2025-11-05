@@ -10,7 +10,7 @@ typedef struct
     volatile uint16_t tail;
 } circular_buffer_t;
 
-void circular_buffer_init(circular_buffer_t * cb);tail = 0;
+void circular_buffer_init(circular_buffer_t * cb);
 
 uint8_t circular_buffer_is_empty(const circular_buffer_t * cb);
 

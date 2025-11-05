@@ -165,7 +165,7 @@ void MX_USART1_UART_UpdateBufferHead()
   }
 }
 
-void MX_USART1_UART_GetReceived(uint8_t * buf, uint16_t maxlen)
+uint16_t MX_USART1_UART_GetReceived(uint8_t * buf, uint16_t maxlen)
 {
   uint16_t bytes_read = 0;
   uint8_t byte;
