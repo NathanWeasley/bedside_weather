@@ -19,9 +19,13 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "usart.h"
+#include "utils/cbuffer.h"
+
+#include <string.h>
 
 /* USER CODE BEGIN 0 */
-
+static circular_buffer_t g_rx_buffer = { 0 };
+static uint8_t g_tx_buffer[DEFAULT_TX_BUFFER_SIZE] = { 0 };
 /* USER CODE END 0 */
 
 /* USART1 init function */
@@ -70,9 +74,9 @@ void MX_USART1_UART_Init(void)
 
   LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_2, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
 
-  LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_2, LL_DMA_PRIORITY_LOW);
+  LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_2, LL_DMA_PRIORITY_MEDIUM);
 
-  LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_2, LL_DMA_MODE_NORMAL);
+  LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_2, LL_DMA_MODE_CIRCULAR);
 
   LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_2, LL_DMA_PERIPH_NOINCREMENT);
 
@@ -81,6 +85,10 @@ void MX_USART1_UART_Init(void)
   LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_2, LL_DMA_PDATAALIGN_BYTE);
 
   LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_2, LL_DMA_MDATAALIGN_BYTE);
+
+  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_2, USART1->RDR, (uint32_t)&(g_rx_buffer.buffer), LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
+  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, DEFAULT_RX_BUFFER_SIZE);
+  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_2);
 
   /* USART1_TX Init */
   LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_3, LL_DMAMUX_REQ_USART1_TX);
@@ -137,5 +145,60 @@ void MX_USART1_UART_Init(void)
 }
 
 /* USER CODE BEGIN 1 */
+
+void MX_USART1_UART_UpdateBufferHead()
+{
+  static uint16_t last_ndtr = DEFAULT_RX_BUFFER_SIZE;
+
+  uint16_t current_ndtr = LL_DMA_GetDataLength(DMA1, LL_DMA_CHANNEL_2);
+
+  if (current_ndtr != last_ndtr)
+  {
+    uint16_t new_head = DEFAULT_RX_BUFFER_SIZE - current_ndtr;
+    if (new_head < g_rx_buffer.head)
+    {
+      // TODO
+    }
+
+    g_rx_buffer.head = new_head;
+    last_ndtr = current_ndtr;
+  }
+}
+
+void MX_USART1_UART_GetReceived(uint8_t * buf, uint16_t maxlen)
+{
+  uint16_t bytes_read = 0;
+  uint8_t byte;
+
+  while (bytes_read < maxlen && circular_buffer_read_byte(&g_rx_buffer, &byte))
+  {
+    buf[bytes_read++] = byte;
+  }
+
+  return bytes_read;
+}
+
+void MX_USART1_UART_StartReceive()
+{
+  LL_USART_EnableDMAReq_RX(USART1);
+}
+
+uint8_t MX_USART1_UART_CheckTXAvailability()
+{
+  return LL_DMA_IsEnabledChannel(DMA1, LL_DMA_CHANNEL_3);
+}
+
+void MX_USART1_UART_DMASend(const uint8_t * data, uint16_t len)
+{
+  uint16_t size = len >= DEFAULT_TX_BUFFER_SIZE ? DEFAULT_TX_BUFFER_SIZE : len;
+  memcpy(g_tx_buffer, data, size);
+
+  LL_USART_DisableDMAReq_TX(USART1);
+  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
+  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3, (uint32_t)&(g_tx_buffer), USART1->TDR, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, size);
+  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
+  LL_USART_EnableDMAReq_TX(USART1);
+}
 
 /* USER CODE END 1 */

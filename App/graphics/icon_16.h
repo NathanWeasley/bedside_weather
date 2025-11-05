@@ -1,23 +1,20 @@
 #pragma once
 
-#include <stdint.h>
+#include "graphics/gfx_fonts.h"
 
 #define ICON_16_HEIGHT      (16)
 #define ICON_16_MAX_WIDTH   (16)
 #define ICON_16_WIDTH_BYTE  (ICON_16_MAX_WIDTH / 8 + ((ICON_16_MAX_WIDTH % 8) != 0))
 
-#define ICON_16_CNT         (8)
+#define ICON_16_CNT         (10)
 
-typedef struct
+#define ICON_16_ASCII_BIAS  (' ')       // Dummy
+
+namespace gfx
 {
-    uint8_t width;
-    uint8_t data[ICON_16_HEIGHT * ICON_16_WIDTH_BYTE];
-} icon_16_glyph_t;
 
-typedef struct
-{
-    const uint8_t height;
-    icon_16_glyph_t glyves[ICON_16_CNT];
-} icon_16_font_t;
+using Icon16 = Font<ICON_16_HEIGHT, ICON_16_MAX_WIDTH, WIDTH_FIXED, ICON_16_CNT, ICON_16_ASCII_BIAS>;
 
-extern const icon_16_font_t g_font16;
+extern const Icon16 icon16_table;
+
+}

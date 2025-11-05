@@ -1,31 +1,54 @@
 #include "utils/cbuffer.h"
 #include <string.h>
 
-static circular_buffer_t g_buffer;
 
-void cbuf_init(circular_buffer_t * pbuf)
+/**
+ * All pointer validity checks are omitted.
+ */
+
+void circular_buffer_init(circular_buffer_t * cb)
 {
-    memset(pbuf, 0, sizeof(circular_buffer_t));
-
-    pbuf->p0 = pbuf->data;
-    pbuf->p1 = pbuf->p0 + DEFAULT_BUFFER_SIZE;
-    pbuf->phead = pbuf->p0;
-    pbuf->ptail = pbuf->p0;
+    cb->head = 0;
+    cb->tail = 0;
 }
 
-size_t cbuf_size(circular_buffer_t * pbuf)
+uint8_t circular_buffer_is_empty(const circular_buffer_t * cb)
 {
-    if (pbuf->phead >= pbuf->ptail)
+    return cb->head == cb->tail;
+}
+
+uint16_t circular_buffer_available(const circular_buffer_t * cb)
+{
+    if (cb->head >= cb->tail)
     {
-        return pbuf->phead - pbuf->ptail;
+        return cb->head - cb->tail;
     }
     else
     {
-        return (pbuf->p1 - pbuf->ptail) + (pbuf->phead - pbuf->p0);
+        return DEFAULT_RX_BUFFER_SIZE - cb->tail  + cb->head;
     }
 }
 
-void cbuf_write(uint8_t * pdata, size_t len)
+uint8_t circular_buffer_read_byte(circular_buffer_t * cb, uint8_t * byte)
 {
-    
+    if (circular_buffer_is_empty(cb))
+    {
+        return 0;
+    }
+
+    *byte = cb->buffer[cb->tail];
+    cb->tail = (cb->tail + 1) % DEFAULT_RX_BUFFER_SIZE;
+
+    return 1;
+}
+
+void circular_buffer_write_byte(circular_buffer_t * cb, uint8_t byte)
+{
+    cb->buffer[cb->head] = byte;
+    cb->head = (cb->head + 1) % DEFAULT_RX_BUFFER_SIZE;
+
+    if (cb->head == cb->tail)
+    {
+        cb->tail = (cb->tail + 1) % DEFAULT_RX_BUFFER_SIZE;
+    }
 }

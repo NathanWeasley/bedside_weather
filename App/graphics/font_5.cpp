@@ -11,6 +11,9 @@
  * pqrstuvwxyz{|}~
 */
 
+namespace gfx
+{
+
 const Font5 font5_table = 
 {
     {
@@ -118,22 +121,7 @@ const Font5 font5_table =
     }
 };
 
-// void font_5_init(font_t * font)
-// {
-//     if (!font)
-//     {
-//         return;
-//     }
-
-//     font->height = FONT_5_HEIGHT;
-//     font->width = 0;
-//     font->width_fixed = 0;
-//     font->count = FONT_5_CNT;
-//     font->ascii_bias = FONT_5_ASCII_BIAS;
-//     font->glyphs = (void *)font5_table;
-// }
-
-
+}
 
 
 

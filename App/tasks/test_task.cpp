@@ -13,8 +13,8 @@ static uint8_t g_vram[LED_CNT];
 using Cvs = Canvas<200, 16>;
 using Wnd1 = Window<Cvs::width(), Cvs::height(), 0, 0, 200, 8>;
 using Wnd2 = Window<Cvs::width(), Cvs::height(), 0, 8, 200, 8>;
-using IconMask1 = Mask<25, 8, METHOD_LSHIFT, 10, Wnd1>;
-using IconMask2 = Mask<25, 8, METHOD_LSHIFT, 20, Wnd2>;
+using IconMask1 = Mask<16, 8, METHOD_LSHIFT, 10, Wnd1>;
+using IconMask2 = Mask<16, 8, METHOD_LSHIFT, 20, Wnd2>;
 
 using Screen = Display<LED_WIDTH, LED_HEIGHT, g_vram>;
 using IconZone1 = DisplayZone<IconMask1, Screen>;

@@ -10,7 +10,11 @@
 
 #define FONT_5_ASCII_BIAS  (' ')
 
+namespace gfx
+{
+
 using Font5 = Font<FONT_5_HEIGHT, FONT_5_MAX_WIDTH, WIDTH_VARIABLE, FONT_5_CNT, FONT_5_ASCII_BIAS>;
 
 extern const Font5 font5_table;
 
+}

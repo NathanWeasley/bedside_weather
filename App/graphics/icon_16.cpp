@@ -1,11 +1,12 @@
 #include "graphics/icon_16.h"
 
-static const icon_16_font_t g_font16 =
+namespace gfx
 {
-    ICON_16_HEIGHT,
+
+static const Icon16 icon16_table =
+{
     {
         {
-            16,
             {
                 0xFF, 0xFF,
                 0xFF, 0xFF,
@@ -26,7 +27,6 @@ static const icon_16_font_t g_font16 =
             }
         },
         {
-            8,
             {
                 0x55, 0xFF,
                 0x55, 0xFF,
@@ -49,4 +49,4 @@ static const icon_16_font_t g_font16 =
     }
 };
 
-
+}
