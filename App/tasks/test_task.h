@@ -1,15 +1,40 @@
 #pragma once
 
 #include "tasks/task.h"
+#include "v1/v1.hpp"
+
+#define TEST_TASK_PRESC             (1)
+
+using CBFunc = void (*)(const v1::Packet&);
+
+class TestTask
+    : public TaskBase
+{
+    using Base = TaskBase;
+
+     TestTask()
+    : Base(TEST_TASK_PRESC)
+    {}
+    ~TestTask() = default;
+
+public:
+    static inline TestTask * instance()
+    {
+        static TestTask tsk;
+        return &tsk;
+    }
+
+    void init() override;
+    void tick() override;
+};
+
+
+
+
 
 /**
  * Task APIs 
  */
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 // #define WIFI_SSID     "ghq"
 // #define WIFI_PASSWORD "gghhqq1963"
@@ -24,12 +49,9 @@ extern "C"
 
 
 uint32_t test_task_param_size();
-void test_task_init(task_param_t * param);
+void test_task_init();
 void test_task_tick();
 
 void test_task_update_icon();
 
 
-#ifdef __cplusplus
-}
-#endif

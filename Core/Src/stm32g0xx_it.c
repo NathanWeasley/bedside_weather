@@ -192,6 +192,20 @@ void SPI1_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles TIM6 global interrupt.
+  */
+void TIM6_IRQHandler(void)
+{
+  if (LL_TIM_IsActiveFlag_UPDATE(TIM6))
+  {
+    LL_TIM_ClearFlag_UPDATE(TIM6);
+
+    // Send schedule flag
+    scheduler_arm();
+  }
+}
+
+/**
   * @brief This function handles USART1 global interrupt / USART1 wake-up interrupt through EXTI line 25.
   */
 void USART1_IRQHandler(void)

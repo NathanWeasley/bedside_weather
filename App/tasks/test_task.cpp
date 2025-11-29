@@ -4,6 +4,8 @@
 #include "graphics/gfx_api.h"
 #include "graphics/font_5.h"
 
+#include "gpio.h"
+
 #define UNUSED(x) (void)(x)
 
 using namespace gfx;
@@ -13,8 +15,8 @@ static uint8_t g_vram[LED_CNT];
 using Cvs = Canvas<200, 16>;
 using Wnd1 = Window<Cvs::width(), Cvs::height(), 0, 0, 200, 8>;
 using Wnd2 = Window<Cvs::width(), Cvs::height(), 0, 8, 200, 8>;
-using IconMask1 = Mask<16, 8, METHOD_LSHIFT, 10, Wnd1>;
-using IconMask2 = Mask<16, 8, METHOD_LSHIFT, 20, Wnd2>;
+using IconMask1 = Mask<16, 8, METHOD_LSHIFT, 2, Wnd1>;
+using IconMask2 = Mask<16, 8, METHOD_LSHIFT, 5, Wnd2>;
 
 using Screen = Display<LED_WIDTH, LED_HEIGHT, g_vram>;
 using IconZone1 = DisplayZone<IconMask1, Screen>;
@@ -25,20 +27,9 @@ static IconMask2 mask2(0, 0);
 static IconZone1 zone1;
 static IconZone2 zone2;
 
-static task_param_t test_task_param;
 
-extern "C" uint32_t test_task_param_size()
+void TestTask::init()
 {
-    return 1;
-}
-
-extern "C" void test_task_init(task_param_t * param)
-{
-    if (param)
-    {
-        test_task_param = *param;
-    }
-
     set_whole<Wnd1>(0);
     set_whole<Wnd2>(128);
     
@@ -53,11 +44,8 @@ extern "C" void test_task_init(task_param_t * param)
     // gfx_update_img(Screen::data());
 }
 
-extern "C" void test_task_tick()
+void TestTask::tick()
 {
-    // Redraw windows
-
-
     // Tick all zones
     // tick_all(zone1, mask1, zone2, mask2);
     zone1.tick_then_update(mask1);

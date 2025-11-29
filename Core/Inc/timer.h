@@ -1,3 +1,3 @@
 #pragma once
 
-void MX_TIM_Init();
+void MX_TIM6_Init();

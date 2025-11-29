@@ -24,7 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 
-#include "tasks/test_task.h"
+#include "tasks/task_schedule.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -58,6 +58,7 @@ int main(void)
   /* Configure the system clock */
   SystemClock_Config();
 
+  /* Driver layer init */
   led_init();
 
   /* Initialize all configured peripherals */
@@ -65,20 +66,19 @@ int main(void)
   MX_DMA_Init();
   MX_SPI1_Init();
   MX_USART1_UART_Init();
-
-  test_task_init(0);
+  MX_TIM6_Init();
 
   OE_L;
   LAT_L;
 
+  /* Initialize all tasks to be performed within main loop */
+  scheduler_init();
+
   while (1)
   {
-    ///< Process UART buffer
-    test_task_tick();
+    scheduler_run();
 
-    ///< Update display buffer
-    GPIOA->ODR ^= LL_GPIO_PIN_1;
-    // gfx_update_img(g_test_img);
+    GPIOA->ODR ^= LL_GPIO_PIN_1;    // Measure main loop frequency
   }
 
 }

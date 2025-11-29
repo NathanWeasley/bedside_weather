@@ -38,11 +38,13 @@ BUILD_DIR = build
 C_SOURCES = \
 Core/Src/main.c \
 Core/Src/gpio.c \
+Core/Src/timer.c \
 Core/Src/stm32g0xx_it.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_gpio.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_exti.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_rcc.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_utils.c \
+Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_tim.c \
 Core/Src/system_stm32g0xx.c \
 Core/Src/dma.c \
 Core/Src/spi.c \
@@ -52,12 +54,14 @@ Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_spi.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_pwr.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_usart.c \
 App/led/led_driver.c \
-App/graphics/demo_img.c 
+App/graphics/demo_img.c \
+App/utils/cbuffer.c
 
 # CPP sources
 CPP_SOURCES = \
 App/graphics/gfx_api.cpp \
 App/graphics/font_5.cpp \
+App/tasks/task_schedule.cpp \
 App/tasks/test_task.cpp \
 App/tasks/comm_task.cpp
 
@@ -168,6 +172,7 @@ CXXFLAGS += $(MCU) $(CPP_DEFS) $(CPP_INCLUDES) $(OPT) -std=c++17
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2
+CXXFLAGS += -g -gdwarf-2
 endif
 
 
@@ -214,7 +219,7 @@ $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
-	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+	$(CXX) $(OBJECTS) $(LDFLAGS) -o $@
 	$(SZ) $@
 
 $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
