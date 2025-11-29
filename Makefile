@@ -62,7 +62,7 @@ CPP_SOURCES = \
 App/graphics/gfx_api.cpp \
 App/graphics/font_5.cpp \
 App/tasks/task_schedule.cpp \
-App/tasks/test_task.cpp \
+App/tasks/display_task.cpp \
 App/tasks/comm_task.cpp
 
 # ASM sources

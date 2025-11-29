@@ -3,24 +3,24 @@
 #include "tasks/task.h"
 #include "v1/v1.hpp"
 
-#define TEST_TASK_PRESC             (1)
+#define DISPLAY_TASK_PRESC             (1)
 
 using CBFunc = void (*)(const v1::Packet&);
 
-class TestTask
+class DisplayTask
     : public TaskBase
 {
     using Base = TaskBase;
 
-     TestTask()
-    : Base(TEST_TASK_PRESC)
+     DisplayTask()
+    : Base(DISPLAY_TASK_PRESC)
     {}
-    ~TestTask() = default;
+    ~DisplayTask() = default;
 
 public:
-    static inline TestTask * instance()
+    static inline DisplayTask * instance()
     {
-        static TestTask tsk;
+        static DisplayTask tsk;
         return &tsk;
     }
 
@@ -46,12 +46,5 @@ public:
 // #define API_FULL_URL  API_URL API_CITY_ID ## "&appid=" ## API_APPID
 
 // const char url[] = API_FULL_URL;
-
-
-uint32_t test_task_param_size();
-void test_task_init();
-void test_task_tick();
-
-void test_task_update_icon();
 
 

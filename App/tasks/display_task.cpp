@@ -1,4 +1,4 @@
-#include "tasks/test_task.h"
+#include "tasks/display_task.h"
 #include "graphics/gfx_animated.hpp"
 #include "graphics/gfx_paint.hpp"
 #include "graphics/gfx_api.h"
@@ -28,7 +28,7 @@ static IconZone1 zone1;
 static IconZone2 zone2;
 
 
-void TestTask::init()
+void DisplayTask::init()
 {
     set_whole<Wnd1>(0);
     set_whole<Wnd2>(128);
@@ -44,7 +44,7 @@ void TestTask::init()
     // gfx_update_img(Screen::data());
 }
 
-void TestTask::tick()
+void DisplayTask::tick()
 {
     // Tick all zones
     // tick_all(zone1, mask1, zone2, mask2);

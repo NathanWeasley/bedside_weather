@@ -2,7 +2,7 @@
 #include "tasks/task.h"
 #include "tasks/task_schedule.h"
 #include "tasks/comm_task.h"
-#include "tasks/test_task.h"
+#include "tasks/display_task.h"
 
 typedef struct
 {
@@ -17,7 +17,7 @@ extern "C" void scheduler_init()
 {
     g_task_list.task_cnt = 2;
     g_task_list.ptasks[0] = CommTask::instance();
-    g_task_list.ptasks[1] = TestTask::instance();
+    g_task_list.ptasks[1] = DisplayTask::instance();
 
     // Initialize all tasks
     for (uint8_t i = 0; i < g_task_list.task_cnt; ++i)
