@@ -21,6 +21,7 @@
 #include "usart.h"
 #include "gpio.h"
 #include "timer.h"
+#include "rtc.h"
 
 /* Private includes ----------------------------------------------------------*/
 
@@ -67,6 +68,7 @@ int main(void)
   MX_SPI1_Init();
   MX_USART1_UART_Init();
   MX_TIM6_Init();
+  MX_RTC_Init();
 
   OE_L;
   LAT_L;
@@ -100,6 +102,13 @@ void SystemClock_Config(void)
   {
   }
 
+  /* LSI configuration and activation */
+  LL_RCC_LSI_Enable();
+  while(LL_RCC_LSI_IsReady() != 1)
+  {
+  }
+
+  LL_PWR_EnableBkUpAccess();
   /* Main PLL configuration and activation */
   LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSI, LL_RCC_PLLM_DIV_1, 8, LL_RCC_PLLR_DIV_2);
   LL_RCC_PLL_Enable();

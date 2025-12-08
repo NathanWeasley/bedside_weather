@@ -53,7 +53,7 @@ void MX_USART1_UART_Init(void)
   */
   GPIO_InitStruct.Pin = LL_GPIO_PIN_9;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   GPIO_InitStruct.Alternate = LL_GPIO_AF_1;
@@ -61,7 +61,7 @@ void MX_USART1_UART_Init(void)
 
   GPIO_InitStruct.Pin = LL_GPIO_PIN_10;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   GPIO_InitStruct.Alternate = LL_GPIO_AF_1;
@@ -86,7 +86,7 @@ void MX_USART1_UART_Init(void)
 
   LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_2, LL_DMA_MDATAALIGN_BYTE);
 
-  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_2, USART1->RDR, (uint32_t)&(g_rx_buffer.buffer), LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
+  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_2, (uint32_t)&USART1->RDR, (uint32_t)&g_rx_buffer.buffer, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
   LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, DEFAULT_RX_BUFFER_SIZE);
   LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_2);
 
@@ -153,7 +153,28 @@ void MX_USART1_UART_StartReceive()
 
 uint8_t MX_USART1_UART_CheckTXAvailability()
 {
-  return LL_DMA_IsEnabledChannel(DMA1, LL_DMA_CHANNEL_3);
+  if (LL_DMA_IsEnabledChannel(DMA1, LL_DMA_CHANNEL_3))
+  {
+    if (!LL_DMA_IsActiveFlag_TC3(DMA1))
+    {
+      return 0;
+    }
+    else
+    {
+      LL_DMA_ClearFlag_TC3(DMA1);
+    }
+
+    if (!LL_USART_IsActiveFlag_TC(USART1))
+    {
+      return 0;
+    }
+    else
+    {
+      LL_USART_ClearFlag_TC(USART1);
+    }
+  }
+
+  return 1;
 }
 
 void MX_USART1_UART_DMASend(const uint8_t * data, uint16_t len)
@@ -163,7 +184,7 @@ void MX_USART1_UART_DMASend(const uint8_t * data, uint16_t len)
 
   LL_USART_DisableDMAReq_TX(USART1);
   LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
-  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3, (uint32_t)&(g_tx_buffer), USART1->TDR, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3, (uint32_t)&g_tx_buffer, (uint32_t)&USART1->TDR, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
   LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, size);
   LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
   LL_USART_EnableDMAReq_TX(USART1);
@@ -171,12 +192,16 @@ void MX_USART1_UART_DMASend(const uint8_t * data, uint16_t len)
 
 void MX_USART1_UART_Send(const uint8_t * data, uint16_t len)
 {
-  while (!LL_USART_IsActiveFlag_TXE(USART1))
+  for (uint16_t i = 0; i < len; ++i)
   {
-      // Wait until TXE flag is set
-  }
+    while (!LL_USART_IsActiveFlag_TXE(USART1))
+    {
+        // Wait until TXE flag is set
+    }
 
-  LL_USART_TransmitData8(USART1, *data);
+    LL_USART_TransmitData8(USART1, *data);
+    ++data;
+  }
 }
 
 void MX_USART1_UART_UpdateBufferHead()

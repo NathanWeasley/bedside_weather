@@ -3,14 +3,23 @@
 #include "tasks/task.h"
 #include "v1/v1.hpp"
 
-#define DISPLAY_TASK_PRESC             (1)
+#define DISPLAY_TASK_PRESC             (5)
 
 using CBFunc = void (*)(const v1::Packet&);
+
+#pragma pack(1)
+struct RxData
+{
+    char str[6];
+};
+#pragma pack()
 
 class DisplayTask
     : public TaskBase
 {
     using Base = TaskBase;
+
+    static RxData  _rxdata;
 
      DisplayTask()
     : Base(DISPLAY_TASK_PRESC)
@@ -26,6 +35,11 @@ public:
 
     void init() override;
     void tick() override;
+
+    void set_string(uint8_t slot, const char * str);
+    void set_icon(uint8_t icon_id);
+
+    static void message_callback(const v1::Packet&);
 };
 
 

@@ -112,7 +112,7 @@ void MX_SPI1_Init(void)
   LL_SPI_EnableNSSPulseMgt(SPI1);
   /* USER CODE BEGIN SPI1_Init 2 */
 
-  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_1, led_get_txbuf_addr(), (uint32_t)&(SPI1->DR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_1, led_get_txbuf_addr(), (uint32_t)&SPI1->DR, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
   LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, led_get_txbuf_size());
   LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
   LL_SPI_Enable(SPI1);

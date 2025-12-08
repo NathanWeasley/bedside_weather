@@ -60,6 +60,18 @@ struct Packet
         return real_len;
     }
 
+    Packet& operator=(const Packet& other)
+    {
+        header = other.header;
+        addr = other.addr;
+        payload_len = other.payload_len;
+
+        // Only copy necessary data to save time (payload + checksum)
+        memcpy(data, other.data, payload_len + 1);
+
+        return *this;
+    }
+
     /**
      * Pack user-defined data into packet
      */

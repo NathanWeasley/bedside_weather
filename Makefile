@@ -45,16 +45,17 @@ Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_exti.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_rcc.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_utils.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_tim.c \
-Core/Src/system_stm32g0xx.c \
-Core/Src/dma.c \
-Core/Src/spi.c \
-Core/Src/usart.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_dma.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_spi.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_pwr.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_usart.c \
+Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_rtc.c \
+Core/Src/system_stm32g0xx.c \
+Core/Src/dma.c \
+Core/Src/spi.c \
+Core/Src/usart.c \
+Core/Src/rtc.c \
 App/led/led_driver.c \
-App/graphics/demo_img.c \
 App/utils/cbuffer.c
 
 # CPP sources
@@ -63,7 +64,8 @@ App/graphics/gfx_api.cpp \
 App/graphics/font_5.cpp \
 App/tasks/task_schedule.cpp \
 App/tasks/display_task.cpp \
-App/tasks/comm_task.cpp
+App/tasks/comm_task.cpp \
+App/tasks/main_task.cpp
 
 # ASM sources
 ASM_SOURCES =  \

@@ -9,16 +9,18 @@
 namespace gfx
 {
 
-typedef enum
+enum class AnimateMethod
+    : uint8_t
 {
-    METHOD_LSHIFT = 1,
+    METHOD_NOANIMATION = 0,
+    METHOD_LSHIFT,
     METHOD_RSHIFT,
     METHOD_USHIFT,
     METHOD_DSHIFT,
     METHOD_BLINK,
     METHOD_INVERSE,
     METHOD_FADE
-} gfx_animate_method_e;
+};
 
 template <uint16_t CW, uint16_t CH>
 struct Canvas
@@ -94,11 +96,25 @@ static constexpr bool is_Window_v = is_Window<T>::value;
 
 
 
-template <gfx_animate_method_e Method, typename DerivedMask>
+template <AnimateMethod Method, typename DerivedMask>
 struct Animate;
 
 template <typename DerivedMask>
-struct Animate<METHOD_LSHIFT, DerivedMask>
+struct Animate<AnimateMethod::METHOD_NOANIMATION, DerivedMask>
+{
+private:
+    auto derived() { return static_cast<DerivedMask *>(this); }
+    const auto derived() const { return static_cast<const DerivedMask *>(this); }
+
+public:
+    inline void move()
+    {
+        // Trivial function - NOANIMATION simply means no change of pointers
+    }
+};
+
+template <typename DerivedMask>
+struct Animate<AnimateMethod::METHOD_LSHIFT, DerivedMask>
 {
 private:
     auto derived() { return static_cast<DerivedMask *>(this); }
@@ -117,7 +133,7 @@ public:
 };
 
 template <typename DerivedMask>
-struct Animate<METHOD_USHIFT, DerivedMask>
+struct Animate<AnimateMethod::METHOD_USHIFT, DerivedMask>
 {
 private:
     auto derived() { return static_cast<DerivedMask *>(this); }
@@ -139,7 +155,7 @@ public:
 
 
 template <
-    uint16_t MW, uint16_t MH, gfx_animate_method_e Method, uint16_t TPM,
+    uint16_t MW, uint16_t MH, AnimateMethod Method, uint16_t TPM,
     typename WD,
     uint16_t DELAY = 0,
     typename = std::enable_if<is_Window_v<WD>>
@@ -152,7 +168,7 @@ struct Mask
 
     static constexpr uint16_t __mwidth = MW;
     static constexpr uint16_t __mheight = MH;
-    static constexpr gfx_animate_method_e __mmethod = Method;
+    static constexpr AnimateMethod __mmethod = Method;
     static constexpr uint16_t __tpm = TPM;
     static constexpr int16_t __delay = DELAY;
 
@@ -169,6 +185,10 @@ struct Mask
     {
         set_ptr();
     }
+
+    Mask()
+    : Mask(0, 0)
+    {}
 
     inline bool tick()
     {
@@ -236,7 +256,7 @@ template <typename T>
 struct is_Mask : std::false_type {};
 
 template <
-    uint16_t MW, uint16_t MH, gfx_animate_method_e Method, uint16_t TPM,
+    uint16_t MW, uint16_t MH, AnimateMethod Method, uint16_t TPM,
     typename WD,
     uint16_t DELAY,
     typename Enabled
