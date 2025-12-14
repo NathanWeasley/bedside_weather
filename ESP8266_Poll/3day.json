@@ -1,0 +1,65 @@
+{
+    "results": [
+      {
+        "location": {
+          "id": "WQJ6YY8MHZP0",
+          "name": "Xian",
+          "country": "CN",
+          "path": "Xian,Xian,Shanxi,China",
+          "timezone": "Asia/Shanghai",
+          "timezone_offset": "+08:00"
+        },
+        "daily": [
+          {
+            "date": "2025-12-14",
+            "text_day": "Sunny",
+            "code_day": "0",
+            "text_night": "Clear",
+            "code_night": "1",
+            "high": "6",
+            "low": "-3",
+            "rainfall": "0.00",
+            "precip": "0.00",
+            "wind_direction": "CLM",
+            "wind_direction_degree": "",
+            "wind_speed": "8.4",
+            "wind_scale": "2",
+            "humidity": "68"
+          },
+          {
+            "date": "2025-12-15",
+            "text_day": "Sunny",
+            "code_day": "0",
+            "text_night": "Cloudy",
+            "code_night": "4",
+            "high": "8",
+            "low": "0",
+            "rainfall": "0.00",
+            "precip": "0.00",
+            "wind_direction": "CLM",
+            "wind_direction_degree": "",
+            "wind_speed": "8.4",
+            "wind_scale": "2",
+            "humidity": "75"
+          },
+          {
+            "date": "2025-12-16",
+            "text_day": "Overcast",
+            "code_day": "9",
+            "text_night": "Clear",
+            "code_night": "1",
+            "high": "15",
+            "low": "1",
+            "rainfall": "0.00",
+            "precip": "0.00",
+            "wind_direction": "CLM",
+            "wind_direction_degree": "",
+            "wind_speed": "3.0",
+            "wind_scale": "1",
+            "humidity": "84"
+          }
+        ],
+        "last_update": "2025-12-14T08:00:00+08:00"
+      }
+    ]
+  }
