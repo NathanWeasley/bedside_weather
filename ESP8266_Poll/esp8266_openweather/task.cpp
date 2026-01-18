@@ -1,383 +1,235 @@
-#include "task.h"
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266WiFiMulti.h>
+#include <ESP8266HTTPClient.h>
+#include <WiFiClient.h>
+#include <ArduinoJson.h>
 
+#include <cstdint>
 #include <unordered_map>
 
-#define WIFI_SSID     "NathansHome"
-#define WIFI_PASSWORD "doge2048"
-// #define API_FORCAST   "forecast"
-// #define API_INSTANT   "weather"
-#define API_URL       "http://api.seniverse.com/v3/weather/daily.json?key="
-// #define API_CITY_ID   "1790630"
-// #define API_COUNTRY   "CN"
-#define API_APPID     "S20jWM82E5Odj8wf4"
-#define API_SUFFIX    "&location=xian&language=en&unit=c"
+ESP8266WiFiMulti WiFiMulti;
 
-// #ifdef DEBUG
-// #undef DEBUG
-// #endif
+#define WIFI_SSID     "ghq"
+#define WIFI_PASSWORD "gghhqq1963"
+#define API_FORCAST   "forecast"
+#define API_INSTANT   "weather"
+#define API_URL       "http://api.openweathermap.org/data/2.5/weather?id="
+#define API_CITY_ID   "1790630"
+#define API_COUNTRY   "CN"
+#define API_APPID     "4da28fda20eca6cb0e9a8a6b5da9002d"
 
-#ifdef DEBUG
-#define SERIAL_PRINT(...)   Serial.print(__VA_ARGS__)
-#define SERIAL_PRINTF(...)  Serial.printf(__VA_ARGS__)
-#define SERIAL_PRINTLN(...) Serial.println(__VA_ARGS__)
-#else
-#define SERIAL_PRINT(...)
-#define SERIAL_PRINTF(...)
-#define SERIAL_PRINTLN(...)
-#endif
+#define FORECAST_MAX_DATA 40
 
-// hash map from weather code to weather icon index
-static inline const std::unordered_map<uint32_t, WeatherType> __weather_type =
+struct TimeDate
 {
-  { 200, WeatherType::THUNDERSTORM },   // Thunderstorm with light rain
-  { 201, WeatherType::THUNDERSTORM },   // Thunderstorm with rain
-  { 202, WeatherType::THUNDERSTORM },   // Thunderstorm with heavy rain
-  { 210, WeatherType::THUNDERSTORM },   // Light thunderstorm
-  { 211, WeatherType::THUNDERSTORM },   // Thunderstorm
-  { 212, WeatherType::THUNDERSTORM },   // Heavy thunderstorm
-  { 221, WeatherType::THUNDERSTORM },   // Ragged thunderstorm
-  { 230, WeatherType::THUNDERSTORM },   // Thunderstorm with light drizzle
-  { 231, WeatherType::THUNDERSTORM },   // Thunderstorm with drizzle
-  { 232, WeatherType::THUNDERSTORM },   // Thunderstorm with heavy drizzle
+  uint16_t _year;
+  uint16_t _month;
+  uint16_t _day;
+  uint16_t _hour;
+  uint16_t _minute;
+  uint16_t _second;
 
-  { 300, WeatherType::DRIZZLE },	  // light intensity drizzle
-  { 301, WeatherType::DRIZZLE },	  // drizzle
-  { 302, WeatherType::DRIZZLE },	  // heavy intensity drizzle
-  { 310, WeatherType::DRIZZLE },	  // light intensity drizzle rain
-  { 311, WeatherType::DRIZZLE },	  // drizzle rain
-  { 312, WeatherType::DRIZZLE },	  // heavy intensity drizzle rain
-  { 313, WeatherType::DRIZZLE },	  // shower rain and drizzle
-  { 314, WeatherType::DRIZZLE },	  // heavy shower rain and drizzle
-  { 321, WeatherType::DRIZZLE },	  // shower drizzle
+  TimeDate()
+  : _year(1970)
+  , _month(0)
+  , _day(0)
+  , _hour(0)
+  , _minute(0)
+  , _second(0)
+  {}
 
-  { 500, WeatherType::RAIN },   // Light rain
-  { 501, WeatherType::RAIN },   // Moderate rain
-  { 502, WeatherType::RAIN },   // Heavy intensity rain
-  { 503, WeatherType::RAIN },   // Very heavy rain
-  { 504, WeatherType::RAIN },   // Extreme rain
-  { 511, WeatherType::SNOW },   // Freezing rain
-  { 520, WeatherType::RAIN },   // Light intensity shower rain
-  { 521, WeatherType::RAIN },   // Shower rain
-  { 522, WeatherType::RAIN },   // Heavy intensity shower rain
-  { 531, WeatherType::RAIN },   // Ragged shower rain
+  TimeDate(uint64_t utc, int8_t zone = 8)
+  {
+    // Adjust timezone
+    utc += (int64_t)zone * 3600;
 
-  { 600, WeatherType::SNOW },   // Light snow
-  { 601, WeatherType::SNOW },   // Snow
-  { 602, WeatherType::SNOW },   // Heavy snow
-  { 611, WeatherType::SNOW },   // Sleet
-  { 612, WeatherType::SNOW },   // Light shower sleet
-  { 613, WeatherType::SNOW },   // Shower sleet
-  { 615, WeatherType::SNOW },   // Light rain and snow
-  { 616, WeatherType::SNOW },   // Rain and snow
-  { 620, WeatherType::SNOW },   // Light shower snow
-  { 621, WeatherType::SNOW },   // Shower snow
-  { 622, WeatherType::SNOW },   // Heavy shower snow
+    // Total days
+    _day = (uint32_t)(utc / __utc_sec_per_day);
 
-  { 701, WeatherType::MIST },   // Mist
-  { 711, WeatherType::MIST },   // Smoke
-  { 721, WeatherType::MIST },   // Haze
-  { 731, WeatherType::MIST },   // Sand/Dust whirls
-  { 741, WeatherType::MIST },   // Fog
-  { 751, WeatherType::MIST },   // Sand
-  { 761, WeatherType::MIST },   // Dust
-  { 762, WeatherType::MIST },   // Volcanic ash
-  { 771, WeatherType::MIST },   // Squalls
-  { 781, WeatherType::MIST },   // Tornado
+    // Extract year
+    _year = 1970;
+    while (_day > __utc_days_in_normal_year)
+    {
+        _day -= days_in_year(_year);
+        ++_year;
+    }
+    bool leap = is_leap_year(_year);
+    
+    // Extract month
+    static const uint8_t days_in_month[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    _month = 0;
+    for (_month = 0; _month < 12; ++_month)
+    {
+        uint8_t monthday = days_in_month[_month] + ((leap && _month == 1) ? 1 : 0);
+        if (_day >= monthday)
+        {
+            _day -= monthday;
+        }
+        else
+        {
+            break;
+        }
+    }
 
-  { 800, WeatherType::CLEAR },   // Clear
+    // Extract day(no need to do anything)
 
-  { 801, WeatherType::CLOUDS },   // Few clouds
-  { 802, WeatherType::CLOUDS },   // Scattered clouds
-  { 803, WeatherType::CLOUDS },   // Broken clouds
-  { 804, WeatherType::CLOUDS },   // Overcast
+    // Extract hour
+    uint32_t seconds = (uint32_t)(utc % __utc_sec_per_day);
+    _hour = seconds / 3600;
+    _minute = seconds % 3600 / 60;
+    _second = seconds % 60;
+  }
+
+private:
+  static constexpr uint32_t __utc_sec_per_day = 86400;
+  static constexpr uint32_t __utc_days_in_normal_year = 365;
+  static constexpr uint32_t __utc_days_in_leap_year = 366;
+
+  static inline bool is_leap_year(uint32_t year)
+  {
+    return (year % 4 == 0) && ((year % 100 != 0) || ((year % 100 == 0) && (year % 400 == 0)));
+  }
+
+  static inline uint32_t days_in_year(uint32_t year)
+  {
+    return is_leap_year(year) ? __utc_days_in_leap_year : __utc_days_in_normal_year;
+  }
 };
 
 
 
-void Task::init()
+// struct WeatherData
+// {
+//   using WeatherType = enum
+//   {
+//     THUNDERSTORM = 2,
+//     DRIZZLE = 3,
+//     RAIN = 5,
+//     SNOW = 6,
+//     MIST = 7,
+//     CLEAR = 8,
+//     CLOUDS = 8,
+//   };
+
+//   // hash map from weather code to weather icon index
+//   static inline constexpr std::unordered_map<uint32_t, uint32_t> __weather_type =
+//   {
+//     { 200, 0 },   // Thunderstorm with light rain
+//     { 201, 0 },   // Thunderstorm with rain
+//     { 202, 0 },   // Thunderstorm with heavy rain
+//     { 210, 0 },   // Light thunderstorm
+//     { 211, 0 },   // Thunderstorm
+//     { 212, 0 },   // Heavy thunderstorm
+//     { 221, 0 },   // Ragged thunderstorm
+//     { 230, 0 },   // Thunderstorm with light drizzle
+//     { 231, 0 },   // Thunderstorm with drizzle
+//     { 232, 0 },   // Thunderstorm with heavy drizzle
+
+//     { 300, 1 },	// light intensity drizzle
+//     { 301, 1 },	// drizzle
+//     { 302, 1 },	// heavy intensity drizzle
+//     { 310, 1 },	// light intensity drizzle rain
+//     { 311, 1 },	// drizzle rain
+//     { 312, 1 },	// heavy intensity drizzle rain
+//     { 313, 1 },	// shower rain and drizzle
+//     { 314, 1 },	// heavy shower rain and drizzle
+//     { 321, 1 },	// shower drizzle
+//   };
+
+
+//   TimeDate timedate;
+//   float temp_max;
+//   float temp_min;
+//   ;
+// };
+
+String url;
+
+void setup()
 {
-    Serial.begin(921600);
-    SERIAL_PRINTLN();
-    SERIAL_PRINTF("<Task> Initializing...");
-    SERIAL_PRINTLN();
+  Serial.begin(115200);
+  Serial.println();
+  Serial.println();
+  Serial.println();
 
-    // Delay for the WiFi stack to initialize
-    for (uint8_t t = 4; t > 0; t--)
-    {
-        SERIAL_PRINTF("<Task> Wait for WiFi %ds...\n", t);
-        Serial.flush();
-        delay(1000);
-    }
-
-    WiFi.mode(WIFI_STA);
-    _wifi_multi.addAP(WIFI_SSID, WIFI_PASSWORD);
-
-    _weather_url = API_URL;
-    // _weather_url += API_CITY_ID;
-    // _weather_url += "&appid=";
-    _weather_url += API_APPID;
-    _weather_url += API_SUFFIX;
-
-    _time_url = "http://api.uuni.cn//api/time";
-
-    reset_read_state();
-}
-
-
-void Task::tick()
-{
-    // Fetch UART RX data
-    while (Serial.available())
-    {
-        _cbuf.writeByte(Serial.read());
-    }
-
-    // Process packet (MCU request decrypt)
-    decrypt_packet();
-
-    // Process 
-    switch (_req.type)
-    {
-    case McuRequest::NETWORK_STATUS:
-    {
-        _status_resp.status = WiFi.status() == WL_CONNECTED     \
-                            ? NetworkCondition::CONNECTED       \
-                            : NetworkCondition::DISCONNECTED;
-        resp_ready();
-    } break;
-
-    case McuRequest::WEATHER:
-    {
-        fetch_weather();
-        resp_weather();
-    } break;
-
-    case McuRequest::DATETIME:
-    {
-        fetch_time();
-        resp_datetime();
-    } break;
-
-    default:
-      break;
-    }
-
+  for (uint8_t t = 4; t > 0; t--)
+  {
+    Serial.printf("[SETUP] WAIT %d...\n", t);
+    Serial.flush();
     delay(1000);
+  }
+
+  WiFi.mode(WIFI_STA);
+  WiFiMulti.addAP(WIFI_SSID, WIFI_PASSWORD);
+
+  url = API_URL;
+  url += API_CITY_ID;
+  url += "&appid=";
+  url += API_APPID;
 }
 
-void Task::fetch_time()
-{
-    if (_wifi_multi.run() == WL_CONNECTED)
+void loop() {
+  // wait for WiFi connection
+  if ((WiFiMulti.run() == WL_CONNECTED))
+  {
+    WiFiClient client;
+    HTTPClient http;
+
+    Serial.print("[HTTP] begin... ");
+    Serial.println(url.c_str());
+    if (http.begin(client, url))
     {
-        WiFiClient client;
-        HTTPClient http;
 
-        SERIAL_PRINT("[HTTP] begin... ");
-        SERIAL_PRINTLN(_time_url.c_str());
-        if (http.begin(client, _time_url))
+      Serial.print("[HTTP] GET...\n");
+      int httpCode = http.GET();
+
+      if (httpCode > 0)
+      {
+        Serial.printf("[HTTP] GET... code: %d\n", httpCode);
+
+        if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
         {
-            SERIAL_PRINT("[HTTP] GET...\n");
-            int httpCode = http.GET();
+          String payload = http.getString();
+          Serial.println("Response:");
+          Serial.println(payload);
 
-            if (httpCode > 0)
-            {
-                SERIAL_PRINTF("[HTTP] GET... code: %d\n", httpCode);
+          // Parse JSON
+          DynamicJsonDocument doc(2000);
+          DeserializationError error = deserializeJson(doc, payload);
 
-                if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
-                {
-                    String payload = http.getString();
-                    SERIAL_PRINTLN("Response:");
-                    SERIAL_PRINTLN(payload);
+          if (error)
+          {
+            Serial.print("Error parsing JSON: ");
+            Serial.println(error.c_str());
+          }
+          else
+          {
+            // Access individual items
+            Serial.println("Parsed Data:");
+            Serial.println("City: " + doc["name"].as<String>());
+            Serial.println("Temperature 1: " + String(doc["main"]["temp"].as<float>() - 273.15f));
+            Serial.println("Weather Description 1: " + doc["weather"][0]["description"].as<String>());
+            // Serial.println("Temperature 2: " + String(doc["list"][1]["main"]["temp"].as<float>()));
+            // Serial.println("Weather ID 1: " + String(doc["list"][0]["weather"][0]["id"].as<int>()));
+            // Serial.println("Weather ID 2: " + String(doc["list"][1]["weather"][0]["id"].as<int>()));
 
-                    // Decrypt data into resp_time
-                    decrypt_time(payload);
-                }
-            }
-            else
-            {
-                SERIAL_PRINTF("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
-            }
-
-            http.end();
+            // Serial.println("Weather Description 2: " + doc["list"][1]["weather"][0]["description"].as<String>());
+          }
         }
-        else
-        {
-            SERIAL_PRINTLN("[HTTP] Unable to connect");
-        }
-    }
-}
+      }
+      else
+      {
+        Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+      }
 
-void Task::fetch_weather()
-{
-    if (_wifi_multi.run() == WL_CONNECTED)
-    {
-        WiFiClient client;
-        HTTPClient http;
-
-        SERIAL_PRINT("[HTTP] begin... ");
-        SERIAL_PRINTLN(_weather_url.c_str());
-        if (http.begin(client, _weather_url))
-        {
-            SERIAL_PRINT("[HTTP] GET...\n");
-            int httpCode = http.GET();
-
-            if (httpCode > 0)
-            {
-                SERIAL_PRINTF("[HTTP] GET... code: %d\n", httpCode);
-
-                if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
-                {
-                    String payload = http.getString();
-                    SERIAL_PRINTLN("Response:");
-                    SERIAL_PRINTLN(payload);
-
-                    // Decrypt data into resp_today and resp_tomorrow
-                    decrypt_weather(payload);
-                }
-            }
-            else
-            {
-                SERIAL_PRINTF("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
-            }
-
-            http.end();
-        }
-        else
-        {
-            SERIAL_PRINTLN("[HTTP] Unable to connect");
-        }
-    }
-}
-
-void Task::reset_read_state()
-{
-    _read_state = ReadState::EXPECT_HEADER1;
-    _bytes_left = 0;
-    _next_ptr = _rx_packet.ptr();
-}
-
-void Task::decrypt_packet()
-{
-    uint8_t byte;
-    uint16_t size = _cbuf.available();
-    for (uint16_t i = 0; i < size; ++i)
-    {
-        if (_cbuf.readByte(byte))
-        {
-            switch (_read_state)
-            {
-            case ReadState::EXPECT_HEADER1:
-            {
-                // Expect header 0xAA
-                if (byte == 0xAA)
-                {
-                    *_next_ptr = byte;
-                    ++_next_ptr;
-                    _read_state = ReadState::EXPECT_HEADER2;
-                }
-            } break;
-            case ReadState::EXPECT_HEADER2:
-            {
-                // Expect header 0x55
-                if (byte == 0x55)
-                {
-                    *_next_ptr = byte;
-                    ++_next_ptr;
-                    _read_state = ReadState::EXPECT_ADDR;
-                }
-                else
-                {
-                    reset_read_state();
-                }
-            } break;
-            case ReadState::EXPECT_ADDR:
-            {
-                // Expect RX address
-                *_next_ptr = byte;
-                ++_next_ptr;
-                _read_state = ReadState::EXPECT_LENGTH1;
-            } break;
-            case ReadState::EXPECT_LENGTH1:
-            {
-                // Expect 1st byte of length
-                *_next_ptr = byte;
-                ++_next_ptr;
-                _read_state = ReadState::EXPECT_LENGTH2;
-            } break;
-            case ReadState::EXPECT_LENGTH2:
-            {
-                // Expect 2nd byte of length
-                *_next_ptr = byte;
-                ++_next_ptr;
-
-                // Check for size exceeding
-                if (_rx_packet.payload_len > v1::Packet::__max_payload_len)
-                {
-                    // Size exceeds maximum limit, must be something wrong
-                    reset_read_state();
-                }
-                else
-                {
-                    _bytes_left = _rx_packet.payload_len + 1; // +1 for reading checksum
-                    _read_state = ReadState::EXPECT_DATA;
-                }
-            } break;
-            case ReadState::EXPECT_DATA:
-            {
-                // Expect data (or checksum)
-                if (_bytes_left > 0)
-                {
-                    // Continue push packet data
-                    *_next_ptr = byte;
-                    ++_next_ptr;
-                    --_bytes_left;
-
-                    if (_bytes_left == 0)
-                    {
-                        // A complete packet is received, decode
-                        if (!_rx_packet.unpack(_req))
-                        {
-                            _req.type = McuRequest::NO_REQUEST;
-                            // switch(_req.type)
-                            // {
-                            // case McuRequest::NETWORK_STATUS:
-                            //     resp_ready();
-                            //     break;
-                            // case McuRequest::DATETIME:
-                            //     resp_datetime();
-                            //     break;
-                            // case McuRequest::WEATHER:
-                            //     resp_weather();
-                            //     break;
-                            // }
-                        }
-
-                        // reset read state to default
-                        reset_read_state();
-                    }
-                }
-            } break;
-
-            default:
-                // Unknown error, force to default
-                reset_read_state();
-            }
-        }
-    }
-}
-
-void Task::decrypt_weather(String& payload)
-{
-    // Parse JSON
-    DeserializationError error = deserializeJson(_json, payload);
-
-    if (error)
-    {
-        SERIAL_PRINT("Error parsing JSON: ");
-        SERIAL_PRINTLN(error.c_str());
+      http.end();
     }
     else
     {
-        ;
+      Serial.println("[HTTP] Unable to connect");
     }
+  }
+
+  delay(600000);
 }
