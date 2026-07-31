@@ -3,3 +3,5 @@
 build
 .vscode
 *.bak
+ESP8266_Poll/secrets.h
+ESP8266_Poll/.build/

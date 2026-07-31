@@ -1,0 +1,17 @@
+#pragma once
+
+// 公共运行参数；Wi-Fi 与 API 密钥请填写在 secrets.h 中。
+#define WEATHER_LOCATION "xian"
+#define WEATHER_LANGUAGE "zh-Hans"
+#define WEATHER_UNIT "c"
+#define DEVICE_TIMEZONE "CST-8"
+
+#define WEATHER_REFRESH_INTERVAL_MS (30UL * 60UL * 1000UL)
+#define WEATHER_RETRY_INTERVAL_MS (5UL * 60UL * 1000UL)
+#define DATETIME_PUSH_INTERVAL_MS (60UL * 60UL * 1000UL)
+#define WIFI_POLL_INTERVAL_MS 1000UL
+#define HTTP_TIMEOUT_MS 8000U
+#define API_MIN_REQUEST_INTERVAL_MS 1100U
+
+// 设为 1 时，调试信息从 Serial1（GPIO2，仅 TX）输出，不污染 MCU 协议串口。
+#define ENABLE_DEBUG_LOG 0

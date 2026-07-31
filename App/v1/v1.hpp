@@ -17,7 +17,7 @@
 
 // ----------------------------
 // |  2 bytes  | 1 byte |  2 bytes  | N bytes | 1 byte |
-// | 0xAA 0x55 |  ADDR  | LENH LENL | PAYLOAD | CHKSUM |
+// | 0xAA 0x55 |  ADDR  | LENL LENH | PAYLOAD | CHKSUM |
 //                            ^ ---  <------->              LEN only represent payload size
 //              <----------------------------> --- ^
 
@@ -99,7 +99,7 @@ struct Packet
         }
 
         // Checksum
-        *ptr = sum;
+        data[payload_len] = sum;
     }
 
     /**

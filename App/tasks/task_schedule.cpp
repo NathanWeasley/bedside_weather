@@ -50,3 +50,28 @@ extern "C" void scheduler_run()
     g_start_schedule = 0;
 }
 
+
+
+
+
+
+
+
+
+extern "C" void __cxa_pure_virtual()
+{
+    // __disable_irq();
+    while(1);
+}
+
+extern "C" int __cxa_guard_acquire(void*) { return 1; }
+extern "C" void __cxa_guard_release(void*) {}
+extern "C" void __cxa_guard_abort(void*) {}
+
+// Stub operators needed when linking without libstdc++
+void *operator new(size_t size) { (void)size; return 0; }
+void *operator new[](size_t size) { (void)size; return 0; }
+void operator delete(void*) {}
+void operator delete[](void*) {}
+void operator delete(void*, unsigned int) {}
+void operator delete[](void*, unsigned int) {}
