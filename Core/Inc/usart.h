@@ -45,9 +45,10 @@ uint8_t MX_USART1_UART_CheckTXAvailability();
 void MX_USART1_UART_DMASend(const uint8_t * data, uint16_t len);
 void MX_USART1_UART_Send(const uint8_t * data, uint16_t len);
 
-void MX_USART1_UART_UpdateBufferHead();
 uint16_t MX_USART1_UART_GetReceived(uint8_t * buf, uint16_t maxlen);
-void * MX_USART1_UART_GetRecvBuffer();
+uint32_t MX_USART1_UART_GetRxOverrunCount(void);
+uint32_t MX_USART1_UART_GetRxErrorCount(void);
+void MX_USART1_UART_RxDmaIRQHandler(void);
 
 /* USER CODE END Prototypes */
 

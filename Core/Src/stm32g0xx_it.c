@@ -22,6 +22,7 @@
 #include "stm32g0xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "usart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -180,7 +181,7 @@ void DMA1_Channel1_IRQHandler(void)
   */
 void DMA1_Channel2_3_IRQHandler(void)
 {
-  ;
+  MX_USART1_UART_RxDmaIRQHandler();
 }
 
 /**

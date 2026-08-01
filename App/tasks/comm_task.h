@@ -1,7 +1,6 @@
 #pragma once
 
 #include "tasks/task.h"
-#include "utils/cbuffer.h"
 #include "v1/v1.hpp"
 
 #include "usart.h"
@@ -32,6 +31,7 @@ class CommTask
     ReadState           _read_state;
     uint16_t            _bytes_left;
     uint8_t *           _next_ptr;
+    uint32_t            _last_rx_overrun_count;
 
     v1::Packet          _rx_packet;
     v1::Packet          _tx_packet;
@@ -42,6 +42,7 @@ class CommTask
     , _read_state(ReadState::EXPECT_HEADER1)
     , _bytes_left(0)
     , _next_ptr(nullptr)
+    , _last_rx_overrun_count(0)
     {}
     ~CommTask() = default;
 
@@ -63,6 +64,7 @@ public:
 
 private:
     void reset_packet_state();
+    void process_received_byte(uint8_t byte);
 };
 
 

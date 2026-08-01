@@ -19,13 +19,47 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "usart.h"
-#include "utils/cbuffer.h"
-
 #include <string.h>
 
 /* USER CODE BEGIN 0 */
-static circular_buffer_t g_rx_buffer = { 0 };
+static uint8_t g_rx_buffer[DEFAULT_RX_BUFFER_SIZE] = { 0 };
 static uint8_t g_tx_buffer[DEFAULT_TX_BUFFER_SIZE] = { 0 };
+
+/*
+ * DMA 以循环模式持续写入 g_rx_buffer。完成一次整环后由 TC 中断累计生产量，
+ * 主循环则维护独立的消费量；这样 head == tail 不再同时表示“空”和“整环未读”。
+ */
+static volatile uint32_t g_rx_dma_completed_bytes = 0;
+static uint32_t g_rx_consumed_bytes = 0;
+static uint32_t g_rx_overrun_bytes = 0;
+static volatile uint32_t g_rx_dma_error_count = 0;
+
+static uint32_t MX_USART1_UART_GetProducedBytes(void)
+{
+  uint32_t completed_before;
+  uint32_t completed_after;
+  uint16_t dma_position;
+  uint8_t transfer_complete_pending;
+
+  /* TC 中断可能与主循环同时更新 completed，读取不一致时重新采样。 */
+  do
+  {
+    completed_before = g_rx_dma_completed_bytes;
+    dma_position = DEFAULT_RX_BUFFER_SIZE - LL_DMA_GetDataLength(DMA1, LL_DMA_CHANNEL_2);
+    transfer_complete_pending = LL_DMA_IsActiveFlag_TC2(DMA1) ? 1U : 0U;
+    completed_after = g_rx_dma_completed_bytes;
+  }
+  while (completed_before != completed_after);
+
+  if (transfer_complete_pending)
+  {
+    /* DMA 已经自动重装 NDTR，但 TC ISR 尚未计入本轮；重新读取环内位置。 */
+    dma_position = DEFAULT_RX_BUFFER_SIZE - LL_DMA_GetDataLength(DMA1, LL_DMA_CHANNEL_2);
+    completed_after += DEFAULT_RX_BUFFER_SIZE;
+  }
+
+  return completed_after + dma_position;
+}
 /* USER CODE END 0 */
 
 /* USART1 init function */
@@ -86,9 +120,10 @@ void MX_USART1_UART_Init(void)
 
   LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_2, LL_DMA_MDATAALIGN_BYTE);
 
-  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_2, (uint32_t)&USART1->RDR, (uint32_t)&g_rx_buffer.buffer, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
+  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_2, (uint32_t)&USART1->RDR, (uint32_t)g_rx_buffer, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
   LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, DEFAULT_RX_BUFFER_SIZE);
-  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_2);
+  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_2);
+  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_2);
 
   /* USART1_TX Init */
   LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_3, LL_DMAMUX_REQ_USART1_TX);
@@ -148,6 +183,21 @@ void MX_USART1_UART_Init(void)
 
 void MX_USART1_UART_StartReceive()
 {
+  LL_USART_DisableDMAReq_RX(USART1);
+  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
+  LL_DMA_ClearFlag_GI2(DMA1);
+
+  g_rx_dma_completed_bytes = 0;
+  g_rx_consumed_bytes = 0;
+  g_rx_overrun_bytes = 0;
+  g_rx_dma_error_count = 0;
+
+  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_2,
+                         (uint32_t)&USART1->RDR,
+                         (uint32_t)g_rx_buffer,
+                         LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
+  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, DEFAULT_RX_BUFFER_SIZE);
+  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_2);
   LL_USART_EnableDMAReq_RX(USART1);
 }
 
@@ -204,41 +254,57 @@ void MX_USART1_UART_Send(const uint8_t * data, uint16_t len)
   }
 }
 
-void MX_USART1_UART_UpdateBufferHead()
-{
-  static uint16_t last_ndtr = DEFAULT_RX_BUFFER_SIZE;
-
-  uint16_t current_ndtr = LL_DMA_GetDataLength(DMA1, LL_DMA_CHANNEL_2);
-
-  if (current_ndtr != last_ndtr)
-  {
-    uint16_t new_head = DEFAULT_RX_BUFFER_SIZE - current_ndtr;
-    if (new_head < g_rx_buffer.head)
-    {
-      // TODO
-    }
-
-    g_rx_buffer.head = new_head;
-    last_ndtr = current_ndtr;
-  }
-}
-
 uint16_t MX_USART1_UART_GetReceived(uint8_t * buf, uint16_t maxlen)
 {
-  uint16_t bytes_read = 0;
-  uint8_t byte;
-
-  while (bytes_read < maxlen && circular_buffer_read_byte(&g_rx_buffer, &byte))
+  if (buf == NULL || maxlen == 0)
   {
-    buf[bytes_read++] = byte;
+    return 0;
   }
 
-  return bytes_read;
+  uint32_t produced = MX_USART1_UART_GetProducedBytes();
+  uint32_t available = produced - g_rx_consumed_bytes;
+
+  if (available > DEFAULT_RX_BUFFER_SIZE)
+  {
+    uint32_t dropped = available - DEFAULT_RX_BUFFER_SIZE;
+    g_rx_consumed_bytes += dropped;
+    g_rx_overrun_bytes += dropped;
+    available = DEFAULT_RX_BUFFER_SIZE;
+  }
+
+  uint16_t bytes_to_read = available < maxlen ? (uint16_t)available : maxlen;
+  for (uint16_t i = 0; i < bytes_to_read; ++i)
+  {
+    buf[i] = g_rx_buffer[(g_rx_consumed_bytes + i) % DEFAULT_RX_BUFFER_SIZE];
+  }
+  g_rx_consumed_bytes += bytes_to_read;
+
+  return bytes_to_read;
 }
 
-void * MX_USART1_UART_GetRecvBuffer()
+uint32_t MX_USART1_UART_GetRxOverrunCount(void)
 {
-  return (void *)&g_rx_buffer;
+  return g_rx_overrun_bytes;
+}
+
+uint32_t MX_USART1_UART_GetRxErrorCount(void)
+{
+  return g_rx_dma_error_count;
+}
+
+void MX_USART1_UART_RxDmaIRQHandler(void)
+{
+  if (LL_DMA_IsActiveFlag_TE2(DMA1))
+  {
+    LL_DMA_ClearFlag_TE2(DMA1);
+    ++g_rx_dma_error_count;
+  }
+
+  if (LL_DMA_IsActiveFlag_TC2(DMA1))
+  {
+    LL_DMA_ClearFlag_TC2(DMA1);
+    g_rx_dma_completed_bytes += DEFAULT_RX_BUFFER_SIZE;
+  }
 }
 
 /* USER CODE END 1 */
