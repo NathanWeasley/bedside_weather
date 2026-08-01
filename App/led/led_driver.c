@@ -1,14 +1,26 @@
 #include "led/led_driver.h"
+#include "main.h"
 #include <string.h>
 
-static led_slice_t      g_led_tx_buf;
 static led_breakdown_t  g_led_breakdown;
 
-static uint16_t         g_weight_table[LED_COLOR_DEPTH];
-static uint16_t         g_current_tick_count;
-static uint8_t          g_current_bit;
+#define LED_BCM_TIME_UNIT_US       (25U)
+#define LED_DMA_RETRY_TIME_US      (25U)
 
-static const uint16_t   g_img2buf_idx[LED_CNT] =
+#if LED_COLOR_DEPTH != 8
+#error "当前BCM权重表仅支持8位灰度"
+#endif
+
+static const uint16_t g_weight_table[LED_COLOR_DEPTH] =
+{
+    128U, 64U, 32U, 16U, 8U, 4U, 2U, 1U
+};
+
+static uint8_t          g_pending_bit;
+static uint8_t          g_display_started;
+static volatile uint32_t g_refresh_error_count;
+
+static const uint8_t    g_img2buf_idx[LED_CNT] =
 {
     0,  2,  2,  2,  2,  4,  4,  4,  4,  6,  6,  6,  6,  8,  8,  8,  8, 10, 10, 10, 10, 12, 12, 12, 12,
     0,  2,  2,  2,  2,  4,  4,  4,  4,  6,  6,  6,  6,  8,  8,  8,  8, 10, 10, 10, 10, 12, 12, 12, 12,
@@ -28,7 +40,7 @@ static const uint16_t   g_img2buf_idx[LED_CNT] =
     1, 39, 39, 39, 39, 41, 41, 41, 41, 43, 43, 43, 43, 45, 45, 45, 45, 47, 47, 47, 47, 49, 49, 49, 49
 };
 
-static const uint16_t   g_img2buf_bit[LED_CNT] =
+static const uint8_t    g_img2buf_bit[LED_CNT] =
 {
     0x80, 0x80, 0x40, 0x20, 0x10, 0x80, 0x40, 0x20, 0x10, 0x80, 0x40, 0x20, 0x10, 0x80, 0x40, 0x20, 0x10, 0x80, 0x40, 0x20, 0x10, 0x80, 0x40, 0x20, 0x10,
     0x40, 0x08, 0x04, 0x02, 0x01, 0x08, 0x04, 0x02, 0x01, 0x08, 0x04, 0x02, 0x01, 0x08, 0x04, 0x02, 0x01, 0x08, 0x04, 0x02, 0x01, 0x08, 0x04, 0x02, 0x01,
@@ -48,33 +60,32 @@ static const uint16_t   g_img2buf_bit[LED_CNT] =
     0x01, 0x08, 0x04, 0x02, 0x01, 0x08, 0x04, 0x02, 0x01, 0x08, 0x04, 0x02, 0x01, 0x08, 0x04, 0x02, 0x01, 0x08, 0x04, 0x02, 0x01, 0x08, 0x04, 0x02, 0x01
 };
 
-void led_init()
+static void led_set_refresh_period(uint16_t period_us)
 {
-    uint16_t i;
+    LL_TIM_SetAutoReload(TIM3, period_us - 1U);
+    LL_TIM_SetCounter(TIM3, 0U);
+}
 
-    /** Initializing global variables */
+static void led_start_bitplane_dma(uint8_t bit)
+{
+    LL_SPI_DisableDMAReq_TX(SPI1);
+    LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
+    LL_DMA_ClearFlag_GI1(DMA1);
+    LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_1,
+                           (uint32_t)g_led_breakdown.slice[bit].data,
+                           (uint32_t)&SPI1->DR,
+                           LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+    LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, LED_BUFFER_SIZE);
+    LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
+    LL_SPI_EnableDMAReq_TX(SPI1);
+}
 
-    g_led_tx_buf.head = g_led_tx_buf.data;
-    g_led_tx_buf.mid = g_led_tx_buf.head + LED_BUFFER_SIZE/2;
-
+void led_init(void)
+{
     memset(&g_led_breakdown, 0xFF, sizeof(g_led_breakdown));
-    for (i = 0; i < LED_COLOR_DEPTH; ++i)
-    {
-        g_led_breakdown.slice[i].head = g_led_breakdown.slice[i].data;
-        g_led_breakdown.slice[i].mid = g_led_breakdown.slice[i].head + LED_BUFFER_SIZE/2;
-    }
-
-    for (i = 0; i < LED_COLOR_DEPTH; ++i)
-    {
-        g_weight_table[i] = 1 << (LED_COLOR_DEPTH - 1 -i);
-    };
-
-    g_current_bit = 0;
-    g_current_tick_count = 0;
-
-    /** Copy first slice */
-
-    memcpy(g_led_tx_buf.head, g_led_breakdown.slice[0].head, LED_BUFFER_SIZE);
+    g_pending_bit = 0U;
+    g_display_started = 0U;
+    g_refresh_error_count = 0U;
 }
 
 void led_update_img(const uint8_t * pdata)
@@ -87,7 +98,7 @@ void led_update_img(const uint8_t * pdata)
     for (i = 0; i < LED_COLOR_DEPTH; ++i)
     {
         mask = 1 << (LED_COLOR_DEPTH - 1 -i);
-        slice_ptr = g_led_breakdown.slice[i].head;
+        slice_ptr = g_led_breakdown.slice[i].data;
         img_ptr = pdata;
 
         ///< memset here will cause flicker
@@ -107,34 +118,59 @@ void led_update_img(const uint8_t * pdata)
     }
 }
 
-uint32_t led_get_txbuf_addr()
+void led_start_refresh(void)
 {
-    return (uint32_t)g_led_tx_buf.head;
+    /* 首个位平面锁存之前保持输出关闭，避免上电时显示移位寄存器中的随机内容。 */
+    OE_H;
+    LAT_L;
+
+    g_pending_bit = 0U;
+    g_display_started = 0U;
+    g_refresh_error_count = 0U;
+
+    led_start_bitplane_dma(g_pending_bit);
+    led_set_refresh_period(LED_DMA_RETRY_TIME_US);
+    LL_TIM_ClearFlag_UPDATE(TIM3);
+    LL_TIM_EnableCounter(TIM3);
 }
 
-uint32_t led_get_txbuf_size()
+void led_refresh_timer_irq_handler(void)
 {
-    return LED_BUFFER_SIZE;
-}
-
-void led_copy_first_half()
-{
-    memcpy(g_led_tx_buf.head, g_led_breakdown.slice[g_current_bit].head, LED_BUFFER_SIZE/2);
-}
-
-void led_copy_last_half()
-{
-    memcpy(g_led_tx_buf.mid, g_led_breakdown.slice[g_current_bit].mid, LED_BUFFER_SIZE/2);
-}
-
-void led_next_tick()
-{
-    if (++g_current_tick_count == g_weight_table[g_current_bit])
+    if (LL_DMA_IsActiveFlag_TE1(DMA1))
     {
-        g_current_tick_count = 0;
-        if (++g_current_bit == LED_COLOR_DEPTH)
-        {
-            g_current_bit = 0;
-        }
+        ++g_refresh_error_count;
+        led_start_bitplane_dma(g_pending_bit);
+        led_set_refresh_period(LED_DMA_RETRY_TIME_US);
+        return;
     }
+
+    if (!LL_DMA_IsActiveFlag_TC1(DMA1) || LL_SPI_IsActiveFlag_BSY(SPI1))
+    {
+        /* 不在中断中忙等；保持当前画面，并在一个时间单位后重试。 */
+        ++g_refresh_error_count;
+        led_set_refresh_period(LED_DMA_RETRY_TIME_US);
+        return;
+    }
+
+    LL_DMA_ClearFlag_GI1(DMA1);
+    LAT_H;
+    LAT_L;
+
+    if (!g_display_started)
+    {
+        OE_L;
+        g_display_started = 1U;
+    }
+
+    const uint8_t displayed_bit = g_pending_bit;
+    g_pending_bit = (uint8_t)((g_pending_bit + 1U) % LED_COLOR_DEPTH);
+
+    /* 当前位平面由输出锁存器保持，同时DMA预装下一个位平面。 */
+    led_start_bitplane_dma(g_pending_bit);
+    led_set_refresh_period((uint16_t)(g_weight_table[displayed_bit] * LED_BCM_TIME_UNIT_US));
+}
+
+uint32_t led_get_refresh_error_count(void)
+{
+    return g_refresh_error_count;
 }

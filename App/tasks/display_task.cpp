@@ -28,12 +28,12 @@ using IconZone = DisplayZone<IconMask, Screen>;
 using TempZone = DisplayZone<TempMask, Screen>;
 
 static IconMask g_icon_mask;
-static TempMask g_temp_mask;
 static IconZone g_icon_zone;
-static TempZone g_temp_zone;
+[[maybe_unused]] static TempMask g_temp_mask;
+[[maybe_unused]] static TempZone g_temp_zone;
 
 
-RxData DisplayTask::_rxdata = {0};
+RxData DisplayTask::_rxdata = { "Apple" };
 
 void DisplayTask::init()
 {
@@ -62,10 +62,16 @@ void DisplayTask::tick()
 
 void DisplayTask::message_callback(const v1::Packet& pk)
 {
-    v1::Packet tpk = pk;
+    v1::Packet tpk;
+    tpk = pk;
 
     if (!tpk.unpack(_rxdata))
     {
         MX_USART1_UART_DMASend((const uint8_t *)"Data recv error.\n", 17);
+    }
+    else
+    {
+        /* 测试载荷固定为“hello”，仍强制保留C字符串结尾。 */
+        _rxdata.str[sizeof(_rxdata.str) - 1U] = '\0';
     }
 }

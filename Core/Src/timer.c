@@ -1,7 +1,27 @@
 #include "main.h"
 #include "config.h"
 
-void MX_TIM6_Init()
+void MX_TIM3_Init(void)
+{
+    LL_TIM_InitTypeDef TIM_InitStruct = {0};
+
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM3);
+
+    NVIC_SetPriority(TIM3_IRQn, 0);
+    NVIC_EnableIRQ(TIM3_IRQn);
+
+    TIM_InitStruct.Prescaler = 64U - 1U;      /* 1MHz，计数单位1us */
+    TIM_InitStruct.CounterMode = LL_TIM_COUNTERDIRECTION_UP;
+    TIM_InitStruct.Autoreload = 25U - 1U;
+    TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
+    LL_TIM_Init(TIM3, &TIM_InitStruct);
+    LL_TIM_DisableARRPreload(TIM3);
+    LL_TIM_SetClockSource(TIM3, LL_TIM_CLOCKSOURCE_INTERNAL);
+    LL_TIM_EnableIT_UPDATE(TIM3);
+    LL_TIM_ClearFlag_UPDATE(TIM3);
+}
+
+void MX_TIM6_Init(void)
 {
     LL_TIM_InitTypeDef TIM_InitStruct = {0};
 

@@ -12,8 +12,14 @@ typedef struct
     TaskBase* ptasks[TASK_MAX_TASKS];
 } task_schedule_t;
 
-static volatile uint8_t g_start_schedule = 0;
-static task_schedule_t g_task_list = { 0 };
+static volatile uint32_t g_pending_schedule_ticks = 0;
+static task_schedule_t g_task_list = {};
+
+namespace
+{
+uint32_t enter_critical_section();
+void leave_critical_section(uint32_t primask);
+}
 
 extern "C" void scheduler_init()
 {
@@ -30,16 +36,23 @@ extern "C" void scheduler_init()
 
 extern "C" void scheduler_arm()
 {
-    g_start_schedule = 1;
+    if (g_pending_schedule_ticks != 0xFFFFFFFFUL)
+    {
+        ++g_pending_schedule_ticks;
+    }
 }
 
 extern "C" void scheduler_run()
 {
-    if (!g_start_schedule)
+    /* 在执行任务之前消费一个节拍；任务期间到达的新节拍会留给下一轮。 */
+    const uint32_t primask = enter_critical_section();
+    if (g_pending_schedule_ticks == 0U)
     {
-        // Not ready for another run
+        leave_critical_section(primask);
         return;
     }
+    --g_pending_schedule_ticks;
+    leave_critical_section(primask);
 
     for (uint8_t i = 0; i < g_task_list.task_cnt; ++i)
     {
@@ -49,7 +62,6 @@ extern "C" void scheduler_run()
         }
     }
 
-    g_start_schedule = 0;
 }
 
 

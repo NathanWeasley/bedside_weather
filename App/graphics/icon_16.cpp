@@ -3,7 +3,7 @@
 namespace gfx
 {
 
-static const Icon16 icon16_table =
+const Icon16 icon16_table =
 {
     {
         {

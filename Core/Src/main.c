@@ -67,11 +67,12 @@ int main(void)
   MX_DMA_Init();
   MX_SPI1_Init();
   MX_USART1_UART_Init();
+  MX_TIM3_Init();
   MX_TIM6_Init();
   MX_RTC_Init();
 
-  OE_L;
   LAT_L;
+  led_start_refresh();
 
   /* Initialize all tasks to be performed within main loop */
   scheduler_init();

@@ -24,6 +24,7 @@
 /* USER CODE BEGIN 0 */
 static uint8_t g_rx_buffer[DEFAULT_RX_BUFFER_SIZE] = { 0 };
 static uint8_t g_tx_buffer[DEFAULT_TX_BUFFER_SIZE] = { 0 };
+static volatile uint8_t g_tx_dma_busy = 0;
 
 /*
  * DMA 以循环模式持续写入 g_rx_buffer。完成一次整环后由 TC 中断累计生产量，
@@ -150,7 +151,7 @@ void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   USART_InitStruct.PrescalerValue = LL_USART_PRESCALER_DIV1;
-  USART_InitStruct.BaudRate = 921600;
+  USART_InitStruct.BaudRate = 115200;
   USART_InitStruct.DataWidth = LL_USART_DATAWIDTH_8B;
   USART_InitStruct.StopBits = LL_USART_STOPBITS_1;
   USART_InitStruct.Parity = LL_USART_PARITY_NONE;
@@ -181,7 +182,7 @@ void MX_USART1_UART_Init(void)
 
 /* USER CODE BEGIN 1 */
 
-void MX_USART1_UART_StartReceive()
+void MX_USART1_UART_StartReceive(void)
 {
   LL_USART_DisableDMAReq_RX(USART1);
   LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
@@ -201,47 +202,78 @@ void MX_USART1_UART_StartReceive()
   LL_USART_EnableDMAReq_RX(USART1);
 }
 
-uint8_t MX_USART1_UART_CheckTXAvailability()
+uint8_t MX_USART1_UART_CheckTXAvailability(void)
 {
-  if (LL_DMA_IsEnabledChannel(DMA1, LL_DMA_CHANNEL_3))
+  if (!g_tx_dma_busy)
   {
-    if (!LL_DMA_IsActiveFlag_TC3(DMA1))
-    {
-      return 0;
-    }
-    else
-    {
-      LL_DMA_ClearFlag_TC3(DMA1);
-    }
-
-    if (!LL_USART_IsActiveFlag_TC(USART1))
-    {
-      return 0;
-    }
-    else
-    {
-      LL_USART_ClearFlag_TC(USART1);
-    }
+    return 1;
   }
+
+  if (LL_DMA_IsActiveFlag_TE3(DMA1))
+  {
+    /* 上一次发送失败时释放通道，允许后续发送重新建立DMA。 */
+    LL_USART_DisableDMAReq_TX(USART1);
+    LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
+    LL_DMA_ClearFlag_GI3(DMA1);
+    g_tx_dma_busy = 0;
+    return 1;
+  }
+
+  if (!LL_DMA_IsActiveFlag_TC3(DMA1) || !LL_USART_IsActiveFlag_TC(USART1))
+  {
+    return 0;
+  }
+
+  LL_USART_DisableDMAReq_TX(USART1);
+  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
+  LL_DMA_ClearFlag_GI3(DMA1);
+  LL_USART_ClearFlag_TC(USART1);
+  g_tx_dma_busy = 0;
+  return 1;
+}
+
+uint8_t MX_USART1_UART_TryDMASend(const uint8_t * data, uint16_t len)
+{
+  if (data == NULL || len == 0U || !MX_USART1_UART_CheckTXAvailability())
+  {
+    return 0;
+  }
+
+  LL_USART_DisableDMAReq_TX(USART1);
+  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
+  LL_DMA_ClearFlag_GI3(DMA1);
+  LL_USART_ClearFlag_TC(USART1);
+  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3,
+                         (uint32_t)data,
+                         (uint32_t)&USART1->TDR,
+                         LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, len);
+  g_tx_dma_busy = 1;
+  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
+  LL_USART_EnableDMAReq_TX(USART1);
 
   return 1;
 }
 
-void MX_USART1_UART_DMASend(const uint8_t * data, uint16_t len)
+uint8_t MX_USART1_UART_DMASend(const uint8_t * data, uint16_t len)
 {
-  uint16_t size = len >= DEFAULT_TX_BUFFER_SIZE ? DEFAULT_TX_BUFFER_SIZE : len;
-  memcpy(g_tx_buffer, data, size);
+  if (data == NULL || len == 0U || len > DEFAULT_TX_BUFFER_SIZE ||
+      !MX_USART1_UART_CheckTXAvailability())
+  {
+    return 0;
+  }
 
-  LL_USART_DisableDMAReq_TX(USART1);
-  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
-  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3, (uint32_t)&g_tx_buffer, (uint32_t)&USART1->TDR, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, size);
-  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
-  LL_USART_EnableDMAReq_TX(USART1);
+  /* 仅在取得空闲通道后复制，避免改写DMA正在读取的普通发送缓冲区。 */
+  memcpy(g_tx_buffer, data, len);
+  return MX_USART1_UART_TryDMASend(g_tx_buffer, len);
 }
 
 void MX_USART1_UART_Send(const uint8_t * data, uint16_t len)
 {
+  while (!MX_USART1_UART_CheckTXAvailability())
+  {
+  }
+
   for (uint16_t i = 0; i < len; ++i)
   {
     while (!LL_USART_IsActiveFlag_TXE(USART1))

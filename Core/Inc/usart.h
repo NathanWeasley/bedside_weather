@@ -40,9 +40,12 @@ void MX_USART1_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
-void MX_USART1_UART_StartReceive();
-uint8_t MX_USART1_UART_CheckTXAvailability();
-void MX_USART1_UART_DMASend(const uint8_t * data, uint16_t len);
+void MX_USART1_UART_StartReceive(void);
+uint8_t MX_USART1_UART_CheckTXAvailability(void);
+/* data必须在DMA发送完成前保持有效；协议包使用此接口。 */
+uint8_t MX_USART1_UART_TryDMASend(const uint8_t * data, uint16_t len);
+/* 复制到内部64字节缓冲区；普通文本和调试信息使用此接口。 */
+uint8_t MX_USART1_UART_DMASend(const uint8_t * data, uint16_t len);
 void MX_USART1_UART_Send(const uint8_t * data, uint16_t len);
 
 uint16_t MX_USART1_UART_GetReceived(uint8_t * buf, uint16_t maxlen);

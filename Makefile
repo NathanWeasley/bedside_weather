@@ -62,6 +62,7 @@ App/utils/cbuffer.c
 CPP_SOURCES = \
 App/graphics/gfx_api.cpp \
 App/graphics/font_5.cpp \
+App/graphics/icon_16.cpp \
 App/tasks/task_schedule.cpp \
 App/tasks/display_task.cpp \
 App/tasks/comm_task.cpp \
@@ -170,7 +171,7 @@ ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffuncti
 
 CFLAGS += $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 
-CXXFLAGS += $(MCU) $(CPP_DEFS) $(CPP_INCLUDES) $(OPT) -std=c++17 -fno-exceptions -fno-rtti
+CXXFLAGS += $(MCU) $(CPP_DEFS) $(CPP_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections -std=c++17 -fno-exceptions -fno-rtti
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2
@@ -180,6 +181,7 @@ endif
 
 # Generate dependency information
 CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
+CXXFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 
 
 #######################################
@@ -215,7 +217,7 @@ $(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR)
 	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
 
 $(BUILD_DIR)/%.o: %.cpp Makefile | $(BUILD_DIR)
-	$(CXX) -c $(CXXFLAGS) $(CPP_DEFS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.cpp=.lst)) $< -o $@
+	$(CXX) -c $(CXXFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.cpp=.lst)) $< -o $@
 
 $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@

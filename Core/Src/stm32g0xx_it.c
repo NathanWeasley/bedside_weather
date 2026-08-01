@@ -146,33 +146,7 @@ void SysTick_Handler(void)
   */
 void DMA1_Channel1_IRQHandler(void)
 {
-  if (LL_DMA_IsActiveFlag_HT1(DMA1))
-  {
-    ///< Copy first half
-    led_next_tick();
-    led_copy_first_half();
-  }
-
-  if (LL_DMA_IsActiveFlag_TC1(DMA1))
-  {
-    while (LL_SPI_IsActiveFlag_BSY(SPI1));
-
-    ///< Send latch signal
-    LAT_H;
-    LAT_L;
-
-    ///< Reconfigure DMA
-    LL_SPI_DisableDMAReq_TX(SPI1);
-    LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
-    LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_1, led_get_txbuf_addr(), (uint32_t)&(SPI1->DR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-    LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, led_get_txbuf_size());
-    LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
-    LL_SPI_EnableDMAReq_TX(SPI1);
-
-    ///< Copy last half
-    led_copy_last_half();
-  }
-
+  /* SPI DMA仅由TIM3轮询完成/错误标志，正常情况下不会进入本中断。 */
   LL_DMA_ClearFlag_GI1(DMA1);
 }
 
@@ -190,6 +164,18 @@ void DMA1_Channel2_3_IRQHandler(void)
 void SPI1_IRQHandler(void)
 {
   ;
+}
+
+/**
+  * @brief This function handles TIM3 global interrupt.
+  */
+void TIM3_IRQHandler(void)
+{
+  if (LL_TIM_IsActiveFlag_UPDATE(TIM3))
+  {
+    LL_TIM_ClearFlag_UPDATE(TIM3);
+    led_refresh_timer_irq_handler();
+  }
 }
 
 /**

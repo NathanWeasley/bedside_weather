@@ -44,9 +44,6 @@ void MX_DMA_Init(void)
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
 
   /* DMA interrupt init */
-  /* DMA1_Channel1_IRQn interrupt configuration (SPI1_TX) */
-  NVIC_SetPriority(DMA1_Channel1_IRQn, 0);
-  NVIC_EnableIRQ(DMA1_Channel1_IRQn);
   /* DMA1_Channel2_3_IRQn interrupt configuration (USART1_TX/RX) */
   NVIC_SetPriority(DMA1_Channel2_3_IRQn, 1);
   NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);

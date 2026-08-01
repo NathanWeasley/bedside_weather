@@ -73,38 +73,21 @@ private:
 template <typename T>
 bool CommTask::send_pack(uint8_t rx_addr, const T& data, bool wait_on_busy)
 {
-    // Check USART1 TX DMA unsent size
-    uint16_t byte2send = LL_DMA_GetDataLength(DMA1, LL_DMA_CHANNEL_3);
-    if (byte2send > 0)
+    // 普通文本和协议包共用同一个底层TX仲裁，任何一方都不能中止正在发送的数据。
+    if (wait_on_busy)
     {
-        if (wait_on_busy)
+        while (!MX_USART1_UART_CheckTXAvailability())
         {
-            while (LL_DMA_GetDataLength(DMA1, LL_DMA_CHANNEL_3));
-        }
-        else
-        {
-            return false;
         }
     }
-    
+    else if (!MX_USART1_UART_CheckTXAvailability())
+    {
+        return false;
+    }
+
     // Pack new data
     _tx_packet.pack(data, rx_addr);
 
-    // Disable DMA so new parameters can be written to register
-    LL_USART_DisableDMAReq_TX(USART1);
-    LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
-
-    // Set new parameters
-    LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3,
-                           (uint32_t)_tx_packet.ptr(),
-                           (uint32_t)&(USART1->TDR),
-                           LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-    LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, _tx_packet.packet_size());
-
-    // Enable DMA and TX request
-    LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
-    LL_USART_EnableDMAReq_TX(USART1);
-
-    return true;
+    return MX_USART1_UART_TryDMASend(_tx_packet.ptr(), _tx_packet.packet_size()) != 0U;
 }
 

@@ -49,7 +49,7 @@ void MX_GPIO_Init(void)
   LL_IOP_GRP1_EnableClock(LL_IOP_GRP1_PERIPH_GPIOB);
 
   /**/
-  LL_GPIO_ResetOutputPin(OE_GPIO_Port, OE_Pin);
+  LL_GPIO_SetOutputPin(OE_GPIO_Port, OE_Pin);
 
   /**/
   LL_GPIO_ResetOutputPin(LAT_GPIO_Port, LAT_Pin);
