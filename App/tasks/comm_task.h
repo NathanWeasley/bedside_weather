@@ -5,7 +5,7 @@
 
 #include "usart.h"
 
-#define COMM_TASK_PRESC             (1)
+#define COMM_TASK_PRESC             (2)     // 调度基准为 10 ms，本任务仍以 20 ms 运行
 #define COMM_TASK_MAX_RX_CALLBACK   (256)
 
 class CommTask

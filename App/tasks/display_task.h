@@ -2,7 +2,7 @@
 
 #include "tasks/task.h"
 
-#define DISPLAY_TASK_PRESC             (5)
+#define DISPLAY_TASK_PRESC             (1)
 
 constexpr uint8_t DISPLAY_LINE_COUNT = 3U;
 constexpr uint8_t DISPLAY_LINE_TEXT_CAPACITY = 40U;
@@ -11,6 +11,7 @@ enum class DisplayMode : uint8_t
 {
     INFORMATION = 0U,
     MATRIX_RAIN,
+    PIXEL_FADE,
 };
 
 /* MainTask 生成最终文本，DisplayTask 只负责绘制与动画。 */

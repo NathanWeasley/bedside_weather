@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <type_traits>
 
-using WidthType = enum
+enum WidthType : uint8_t
 {
     WIDTH_FIXED = 0,
     WIDTH_VARIABLE = 1

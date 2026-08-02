@@ -1,6 +1,7 @@
 #include "tasks/display_task.h"
 
 #include "graphics/animations/matrix_rain.hpp"
+#include "graphics/animations/pixel_fade.hpp"
 #include "graphics/gfx_animated.hpp"
 #include "graphics/gfx_api.h"
 #include "graphics/gfx_paint.hpp"
@@ -16,7 +17,7 @@ namespace
 constexpr uint16_t LINE_CANVAS_WIDTH = 256U;
 constexpr uint16_t LINE_HEIGHT = 5U;
 constexpr uint16_t SCROLL_GAP_PIXELS = 8U;
-constexpr uint16_t SCROLL_PERIOD_TICKS = 1U;   // DisplayTask 为 100 ms，故每 100 ms 移动 1 像素
+constexpr uint16_t SCROLL_PERIOD_TICKS = 10U;  // DisplayTask 为 10 ms，仍保持每 100 ms 移动 1 像素
 
 struct GuiCanvasTag;
 using GuiCanvas = Canvas<LINE_CANVAS_WIDTH, LINE_HEIGHT * DISPLAY_LINE_COUNT, GuiCanvasTag>;
@@ -41,6 +42,8 @@ using DateTimeZone = DisplayZone<DateTimeView, Screen>;
 using WeatherZone = DisplayZone<WeatherView, Screen>;
 using MatrixRainView = animations::MatrixRainView;
 using MatrixRainZone = DisplayZone<MatrixRainView, Screen>;
+using PixelFadeView = animations::PixelFadeView;
+using PixelFadeZone = DisplayZone<PixelFadeView, Screen>;
 
 static NetworkView g_network_view;
 static DateTimeView g_datetime_view;
@@ -50,6 +53,8 @@ static DateTimeZone g_datetime_zone;
 static WeatherZone g_weather_zone;
 static MatrixRainView g_matrix_rain_view;
 static MatrixRainZone g_matrix_rain_zone;
+static PixelFadeView g_pixel_fade_view;
+static PixelFadeZone g_pixel_fade_zone;
 
 template <typename ViewType, typename ZoneType>
 bool service_fullscreen_animation(ViewType& view, ZoneType& zone, bool reset)
@@ -100,10 +105,23 @@ void DisplayTask::init()
 
 void DisplayTask::tick()
 {
-    if (_mode == DisplayMode::MATRIX_RAIN)
+    if (_mode != DisplayMode::INFORMATION)
     {
-        const bool updated = service_fullscreen_animation(
-            g_matrix_rain_view, g_matrix_rain_zone, _mode_dirty);
+        bool updated = false;
+        switch (_mode)
+        {
+            case DisplayMode::MATRIX_RAIN:
+                updated = service_fullscreen_animation(
+                    g_matrix_rain_view, g_matrix_rain_zone, _mode_dirty);
+                break;
+            case DisplayMode::PIXEL_FADE:
+                updated = service_fullscreen_animation(
+                    g_pixel_fade_view, g_pixel_fade_zone, _mode_dirty);
+                break;
+            case DisplayMode::INFORMATION:
+            default:
+                break;
+        }
         _mode_dirty = false;
         if (updated)
         {

@@ -22,7 +22,8 @@ TARGET = bedside_weather
 # debug build?
 DEBUG = 1
 # optimization
-OPT = -Og
+OPT = -O3
+LTO = -flto
 
 
 #######################################
@@ -64,6 +65,7 @@ App/graphics/gfx_api.cpp \
 App/graphics/font_5.cpp \
 App/graphics/icon_16.cpp \
 App/graphics/animations/matrix_rain.cpp \
+App/graphics/animations/pixel_fade.cpp \
 App/tasks/task_schedule.cpp \
 App/tasks/display_task.cpp \
 App/tasks/comm_task.cpp \
@@ -170,9 +172,9 @@ CPP_INCLUDES = \
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 
-CFLAGS += $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
+CFLAGS += $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) $(LTO) -Wall -fdata-sections -ffunction-sections
 
-CXXFLAGS += $(MCU) $(CPP_DEFS) $(CPP_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections -std=c++17 -fno-exceptions -fno-rtti
+CXXFLAGS += $(MCU) $(CPP_DEFS) $(CPP_INCLUDES) $(OPT) $(LTO) -Wall -fdata-sections -ffunction-sections -std=c++17 -fno-exceptions -fno-rtti
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2
@@ -194,7 +196,7 @@ LDSCRIPT = STM32G070XX_FLASH.ld
 # libraries
 LIBS = -lc -lm -lnosys 
 LIBDIR = 
-LDFLAGS = $(MCU) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
+LDFLAGS = $(MCU) $(OPT) $(LTO) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
 
 # default action: build all
 all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin
@@ -215,10 +217,10 @@ OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASMM_SOURCES:.S=.o)))
 vpath %.S $(sort $(dir $(ASMM_SOURCES)))
 
 $(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR) 
-	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: %.cpp Makefile | $(BUILD_DIR)
-	$(CXX) -c $(CXXFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.cpp=.lst)) $< -o $@
+	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@

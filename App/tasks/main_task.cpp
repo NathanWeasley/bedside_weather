@@ -18,6 +18,7 @@ constexpr uint32_t DATETIME_RETRY_TICKS = 1500U;            // 时间无效时�
 constexpr uint32_t WEATHER_PERIOD_TICKS = 90000U;           // 有效天气每 30 分钟请求一次
 constexpr uint32_t WEATHER_RETRY_TICKS = 15000U;            // 无有效天气时每 5 分钟重试
 constexpr uint32_t MATRIX_RAIN_DURATION_TICKS = 1500U;       // 数字雨显示 30 秒
+constexpr uint32_t PIXEL_FADE_DURATION_TICKS = 1500U;        // 逐像素渐变显示 30 秒
 constexpr uint32_t INFORMATION_DURATION_TICKS = 500U;        // 信息页显示 10 秒
 
 constexpr uint8_t WEATHER_KNOWN_STATUS_MASK =
@@ -183,8 +184,8 @@ public:
             value = -value;
         }
         append_unsigned(static_cast<uint32_t>(value / 10));
-        append('.');
-        append(static_cast<char>('0' + (value % 10)));
+        // append('.');
+        // append(static_cast<char>('0' + (value % 10)));
     }
 };
 
@@ -281,7 +282,7 @@ void MainTask::init()
     _request_gap_ticks = 0U;
     _last_display_minute = 0xFFU;
     _display_dirty = true;
-    _matrix_rain_active = true;
+    _display_phase = DisplayPhase::MATRIX_RAIN;
     _display_mode_ticks = MATRIX_RAIN_DURATION_TICKS;
     DisplayTask::instance()->set_display_mode(DisplayMode::MATRIX_RAIN);
 }
@@ -317,16 +318,32 @@ void MainTask::service_display_mode()
         return;
     }
 
-    _matrix_rain_active = !_matrix_rain_active;
-    if (_matrix_rain_active)
+    switch (_display_phase)
     {
-        _display_mode_ticks = MATRIX_RAIN_DURATION_TICKS;
-        DisplayTask::instance()->set_display_mode(DisplayMode::MATRIX_RAIN);
-    }
-    else
-    {
-        _display_mode_ticks = INFORMATION_DURATION_TICKS;
-        DisplayTask::instance()->set_display_mode(DisplayMode::INFORMATION);
+        case DisplayPhase::MATRIX_RAIN:
+            _display_phase = DisplayPhase::INFORMATION_AFTER_MATRIX;
+            _display_mode_ticks = INFORMATION_DURATION_TICKS;
+            DisplayTask::instance()->set_display_mode(DisplayMode::INFORMATION);
+            break;
+
+        case DisplayPhase::INFORMATION_AFTER_MATRIX:
+            _display_phase = DisplayPhase::PIXEL_FADE;
+            _display_mode_ticks = PIXEL_FADE_DURATION_TICKS;
+            DisplayTask::instance()->set_display_mode(DisplayMode::PIXEL_FADE);
+            break;
+
+        case DisplayPhase::PIXEL_FADE:
+            _display_phase = DisplayPhase::INFORMATION_AFTER_PIXEL_FADE;
+            _display_mode_ticks = INFORMATION_DURATION_TICKS;
+            DisplayTask::instance()->set_display_mode(DisplayMode::INFORMATION);
+            break;
+
+        case DisplayPhase::INFORMATION_AFTER_PIXEL_FADE:
+        default:
+            _display_phase = DisplayPhase::MATRIX_RAIN;
+            _display_mode_ticks = MATRIX_RAIN_DURATION_TICKS;
+            DisplayTask::instance()->set_display_mode(DisplayMode::MATRIX_RAIN);
+            break;
     }
 }
 

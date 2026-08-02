@@ -23,7 +23,7 @@ extern "C"
 #define GFX_VPAINT_MAX_HEIGHT   (32)
 
 #define TASK_MAX_TASKS          (16)
-#define TASK_SCHEDULE_PERIOD_US (20000)     // 20ms -> 50Hz
+#define TASK_SCHEDULE_PERIOD_US (10000)     // 10 ms -> 100 Hz
 
 #ifdef __cplusplus
 }

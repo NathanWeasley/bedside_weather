@@ -7,25 +7,21 @@
 namespace gfx::animations
 {
 
-/*
- * 过程式数字雨视图：只保存每一列的运动状态，不为各列分配独立画布。
- * 接口与 DisplayZone 的 View 约定兼容，可作为全屏预装载动画直接接入。
- */
-class MatrixRainView
+/* 每个像素独立在 0~255 之间往返渐变的过程式全屏视图。 */
+class PixelFadeView
 {
-    struct ColumnState
+    struct PixelState
     {
-        int16_t head_y_q8;
-        uint8_t velocity_q8;
-        uint8_t trail_length;
-        uint8_t reset_delay;
-        uint8_t peak_brightness;
+        uint16_t brightness_q8;
+        int16_t velocity_q8;
+        uint8_t quantization_error;
+        uint8_t output_brightness;
     };
 
-    ColumnState _columns[LED_WIDTH];
+    PixelState _pixels[LED_CNT];
 
 public:
-    MatrixRainView();
+    PixelFadeView();
 
     void reset();
     bool tick();

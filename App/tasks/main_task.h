@@ -4,7 +4,7 @@
 #include "v1/v1.hpp"
 #include "v1/weather_protocol.h"
 
-#define MAIN_TASK_PRESC             (1)
+#define MAIN_TASK_PRESC             (2)     // 调度基准为 10 ms，本任务仍以 20 ms 运行
 
 class MainTask
     : public TaskBase
@@ -16,6 +16,14 @@ class MainTask
         RESPONSE_NETWORK_VALID = 1U << 0,
         RESPONSE_DATETIME_VALID = 1U << 1,
         RESPONSE_WEATHER_VALID = 1U << 2,
+    };
+
+    enum class DisplayPhase : uint8_t
+    {
+        MATRIX_RAIN = 0U,
+        INFORMATION_AFTER_MATRIX,
+        PIXEL_FADE,
+        INFORMATION_AFTER_PIXEL_FADE,
     };
 
     bedside::NetworkStatusResponse _network_status;
@@ -32,7 +40,7 @@ class MainTask
     uint8_t             _last_display_minute;
     bool                _display_dirty;
     uint32_t            _display_mode_ticks;
-    bool                _matrix_rain_active;
+    DisplayPhase        _display_phase;
 
     MainTask()
     : Base(MAIN_TASK_PRESC)
@@ -48,7 +56,7 @@ class MainTask
     , _last_display_minute(0xFFU)
     , _display_dirty(true)
     , _display_mode_ticks(0U)
-    , _matrix_rain_active(true)
+    , _display_phase(DisplayPhase::MATRIX_RAIN)
     {}
     ~MainTask() = default;
 
