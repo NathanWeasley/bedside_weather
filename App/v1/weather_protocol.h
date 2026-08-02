@@ -5,6 +5,7 @@
 namespace bedside
 {
 
+constexpr uint8_t ADDR_REQUEST = 0;
 constexpr uint8_t ADDR_STATUS = 10;
 constexpr uint8_t ADDR_DATETIME = 11;
 constexpr uint8_t ADDR_WEATHER = 12;

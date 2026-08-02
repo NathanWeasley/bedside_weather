@@ -108,7 +108,7 @@ struct Packet
      *   before calling unpack<...>(...).
      */
     template <typename T>
-    bool unpack(T& payload, uint8_t& rx_addr)
+    bool unpack(T& payload, uint8_t& rx_addr) const
     {
         static_assert(sizeof(T) <= __max_payload_len, "<V1> Payload exceeds packet limit!");
         static_assert(alignof(T) == 1, "<V1> Payload type must be 1-byte aligned to avoid padding!");
@@ -122,7 +122,7 @@ struct Packet
         checksum += static_cast<uint8_t>(payload_len >> 8);
         checksum += static_cast<uint8_t>(payload_len & 0x00FF);
 
-        uint8_t * ptr = data;
+        const uint8_t * ptr = data;
         for (uint16_t i = 0; i < payload_len; ++i)
         {
             checksum += *ptr;
@@ -141,7 +141,7 @@ struct Packet
     }
 
     template <typename T>
-    bool unpack(T& payload)
+    bool unpack(T& payload) const
     {
         uint8_t dummy;
         return unpack(payload, dummy);

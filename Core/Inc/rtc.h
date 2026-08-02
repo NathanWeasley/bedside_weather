@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "main.h"
 
 typedef struct
@@ -17,4 +21,8 @@ void MX_RTC_Init(void);
 
 void MX_RTC_Get(date_time_t * pdatetime);
 void MX_RTC_Set(const date_time_t * pdatetime);
+
+#ifdef __cplusplus
+}
+#endif
 

@@ -34,6 +34,7 @@ static IconZone g_icon_zone;
 
 
 RxData DisplayTask::_rxdata = { "Apple" };
+DisplayInfo DisplayTask::_display_info = {};
 
 void DisplayTask::init()
 {
@@ -48,6 +49,7 @@ void DisplayTask::init()
 
 void DisplayTask::tick()
 {
+    /* 当前仍保留 hello/RxData 显示测试；正式 UI 可直接消费 _display_info。 */
     // Content update
     draw_string<IconWnd>(0, 0, _rxdata.str, font5_table, 255, 0);
     
@@ -60,12 +62,14 @@ void DisplayTask::tick()
     gfx_update_img(Screen::data());
 }
 
+void DisplayTask::set_display_info(const DisplayInfo& info)
+{
+    _display_info = info;
+}
+
 void DisplayTask::message_callback(const v1::Packet& pk)
 {
-    v1::Packet tpk;
-    tpk = pk;
-
-    if (!tpk.unpack(_rxdata))
+    if (!pk.unpack(_rxdata))
     {
         MX_USART1_UART_DMASend((const uint8_t *)"Data recv error.\n", 17);
     }

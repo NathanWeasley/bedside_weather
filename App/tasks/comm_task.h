@@ -27,7 +27,6 @@ class CommTask
 
     CBFunc              _callbacks[COMM_TASK_MAX_RX_CALLBACK];
 
-    // Packet scan state
     ReadState           _read_state;
     uint16_t            _bytes_left;
     uint8_t *           _next_ptr;
@@ -56,7 +55,7 @@ public:
     void init() override;
     void tick() override;
 
-    bool register_callback(uint8_t recv_idx, void (*cb)(const v1::Packet&));
+    bool register_callback(uint8_t recv_idx, CBFunc cb);
     void release_callback(uint8_t recv_idx);
 
     template <typename T>
@@ -67,13 +66,10 @@ private:
     void process_received_byte(uint8_t byte);
 };
 
-
-
-
 template <typename T>
 bool CommTask::send_pack(uint8_t rx_addr, const T& data, bool wait_on_busy)
 {
-    // 普通文本和协议包共用同一个底层TX仲裁，任何一方都不能中止正在发送的数据。
+    /* 普通文本与协议包共用底层 TX 仲裁，不能中止正在进行的 DMA 发送。 */
     if (wait_on_busy)
     {
         while (!MX_USART1_UART_CheckTXAvailability())
@@ -85,9 +81,6 @@ bool CommTask::send_pack(uint8_t rx_addr, const T& data, bool wait_on_busy)
         return false;
     }
 
-    // Pack new data
     _tx_packet.pack(data, rx_addr);
-
     return MX_USART1_UART_TryDMASend(_tx_packet.ptr(), _tx_packet.packet_size()) != 0U;
 }
-

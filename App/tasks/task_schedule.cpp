@@ -2,6 +2,7 @@
 #include "tasks/task.h"
 #include "tasks/task_schedule.h"
 #include "tasks/comm_task.h"
+#include "tasks/main_task.h"
 #include "tasks/display_task.h"
 
 #include <cstddef>
@@ -23,9 +24,10 @@ void leave_critical_section(uint32_t primask);
 
 extern "C" void scheduler_init()
 {
-    g_task_list.task_cnt = 2;
+    g_task_list.task_cnt = 3;
     g_task_list.ptasks[0] = CommTask::instance();
-    g_task_list.ptasks[1] = DisplayTask::instance();
+    g_task_list.ptasks[1] = MainTask::instance();
+    g_task_list.ptasks[2] = DisplayTask::instance();
 
     // Initialize all tasks
     for (uint8_t i = 0; i < g_task_list.task_cnt; ++i)
