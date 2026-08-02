@@ -1,81 +1,131 @@
 #include "tasks/display_task.h"
-#include "tasks/comm_task.h"
+
 #include "graphics/gfx_animated.hpp"
-#include "graphics/gfx_paint.hpp"
 #include "graphics/gfx_api.h"
+#include "graphics/gfx_paint.hpp"
 #include "graphics/font_5.h"
+
+#include <cstring>
 
 using namespace gfx;
 
-// Define high-level monochrome video memory
+namespace
+{
+
+constexpr uint16_t LINE_CANVAS_WIDTH = 256U;
+constexpr uint16_t LINE_HEIGHT = 5U;
+constexpr uint16_t SCROLL_GAP_PIXELS = 8U;
+constexpr uint16_t SCROLL_PERIOD_TICKS = 1U;   // DisplayTask 为 100 ms，故每 100 ms 移动 1 像素
+
+struct GuiCanvasTag;
+using GuiCanvas = Canvas<LINE_CANVAS_WIDTH, LINE_HEIGHT * DISPLAY_LINE_COUNT, GuiCanvasTag>;
+
+using NetworkWindow = Window<GuiCanvas, 0U, 0U, LINE_CANVAS_WIDTH, LINE_HEIGHT>;
+using DateTimeWindow = Window<GuiCanvas, 0U, 5U, LINE_CANVAS_WIDTH, LINE_HEIGHT>;
+using WeatherWindow = Window<GuiCanvas, 0U, 10U, LINE_CANVAS_WIDTH, LINE_HEIGHT>;
+
+using NetworkViewport = Viewport<LED_WIDTH, LINE_HEIGHT, NetworkWindow>;
+using DateTimeViewport = Viewport<LED_WIDTH, LINE_HEIGHT, DateTimeWindow>;
+using WeatherViewport = Viewport<LED_WIDTH, LINE_HEIGHT, WeatherWindow>;
+
+using NetworkView = AnimatedView<NetworkViewport, ScrollAnimator>;
+using DateTimeView = AnimatedView<DateTimeViewport, ScrollAnimator>;
+using WeatherView = AnimatedView<WeatherViewport, ScrollAnimator>;
+
 static uint8_t g_vram[LED_CNT];
-
-// Declare total canvas
-using Cvs = Canvas<500, 16>;
-
-// Declare display window and mask for weather icon
-using IconWnd = Window<Cvs::width(), Cvs::height(), 0, 0, 48, 16>;
-// using IconMask = Mask<16, 16, AnimateMethod::METHOD_LSHIFT, 4, IconWnd>;
-using IconMask = Mask<25, 16, AnimateMethod::METHOD_LSHIFT, 1, IconWnd>;
-
-// Declare display window and mask for temperature
-using TempWnd = Window<Cvs::width(), Cvs::height(), 16, 0, 9, 16>;
-using TempMask = Mask<9, 16, AnimateMethod::METHOD_NOANIMATION, 1, TempWnd>;
-
-// Declare physical display
 using Screen = Display<LED_WIDTH, LED_HEIGHT, g_vram>;
-using IconZone = DisplayZone<IconMask, Screen>;
-using TempZone = DisplayZone<TempMask, Screen>;
 
-static IconMask g_icon_mask;
-static IconZone g_icon_zone;
-[[maybe_unused]] static TempMask g_temp_mask;
-[[maybe_unused]] static TempZone g_temp_zone;
+using NetworkZone = DisplayZone<NetworkView, Screen>;
+using DateTimeZone = DisplayZone<DateTimeView, Screen>;
+using WeatherZone = DisplayZone<WeatherView, Screen>;
 
+static NetworkView g_network_view;
+static DateTimeView g_datetime_view;
+static WeatherView g_weather_view;
+static NetworkZone g_network_zone;
+static DateTimeZone g_datetime_zone;
+static WeatherZone g_weather_zone;
 
-RxData DisplayTask::_rxdata = { "Apple" };
-DisplayInfo DisplayTask::_display_info = {};
+template <typename WindowType, typename ViewType, typename ZoneType>
+void render_line(const char * text, ViewType& view, ZoneType& zone)
+{
+    set_whole<WindowType>(0U);
+    const uint16_t text_width = draw_string<WindowType>(
+        0U, 0U, text, font5_table, 255U, 0);
+
+    const bool scrolling = text_width > LED_WIDTH;
+    uint16_t cycle_width = LED_WIDTH;
+    if (scrolling)
+    {
+        const uint32_t requested_width = static_cast<uint32_t>(text_width) + SCROLL_GAP_PIXELS;
+        cycle_width = (requested_width > WindowType::width()) ?
+                      WindowType::width() : static_cast<uint16_t>(requested_width);
+    }
+
+    view.viewport().set_cycle_size(cycle_width, LINE_HEIGHT);
+    view.animator().configure(
+        ScrollDirection::LEFT,
+        SCROLL_PERIOD_TICKS,
+        0U,
+        scrolling);
+    view.reset();
+    zone.update(view);
+}
+
+} // namespace
 
 void DisplayTask::init()
 {
-    CommTask::instance()->register_callback(5, DisplayTask::message_callback);
-
-    set_whole<IconWnd>(0);
-    // set_whole<TempWnd>(128);
-    
-    // draw_string<Wnd1>(0, 0, "A quick brown fox jumps over the lazy dog.", font5_table, 255, 0);
-    // draw_string<Wnd2>(0, 0, "0123456789!@#$%^&*()-=_+[]{};':\",.<>/?\\|", font5_table, 255);
+    set_whole<GuiCanvas>(0U);
+    memset(g_vram, 0, sizeof(g_vram));
+    _dirty_lines = (1U << DISPLAY_LINE_COUNT) - 1U;
 }
 
 void DisplayTask::tick()
 {
-    /* 当前仍保留 hello/RxData 显示测试；正式 UI 可直接消费 _display_info。 */
-    // Content update
-    draw_string<IconWnd>(0, 0, _rxdata.str, font5_table, 255, 0);
-    
-    // Tick all zones
-    // tick_all(zone1, mask1, zone2, mask2);
-    g_icon_zone.tick_then_update(g_icon_mask);
-    // g_temp_zone.tick_then_update(g_temp_mask);
+    bool updated = false;
 
-    // Repaint
-    gfx_update_img(Screen::data());
-}
-
-void DisplayTask::set_display_info(const DisplayInfo& info)
-{
-    _display_info = info;
-}
-
-void DisplayTask::message_callback(const v1::Packet& pk)
-{
-    if (!pk.unpack(_rxdata))
+    if ((_dirty_lines & (1U << 0)) != 0U)
     {
-        MX_USART1_UART_DMASend((const uint8_t *)"Data recv error.\n", 17);
+        render_line<NetworkWindow>(_content.lines[0], g_network_view, g_network_zone);
+        updated = true;
     }
-    else
+    if ((_dirty_lines & (1U << 1)) != 0U)
     {
-        /* 测试载荷固定为“hello”，仍强制保留C字符串结尾。 */
-        _rxdata.str[sizeof(_rxdata.str) - 1U] = '\0';
+        render_line<DateTimeWindow>(_content.lines[1], g_datetime_view, g_datetime_zone);
+        updated = true;
+    }
+    if ((_dirty_lines & (1U << 2)) != 0U)
+    {
+        render_line<WeatherWindow>(_content.lines[2], g_weather_view, g_weather_zone);
+        updated = true;
+    }
+    _dirty_lines = 0U;
+
+    updated = tick_all(
+        g_network_zone, g_network_view,
+        g_datetime_zone, g_datetime_view,
+        g_weather_zone, g_weather_view) || updated;
+
+    if (updated)
+    {
+        gfx_update_img(Screen::data());
+    }
+}
+
+void DisplayTask::set_display_content(const DisplayContent& content)
+{
+    for (uint8_t line = 0U; line < DISPLAY_LINE_COUNT; ++line)
+    {
+        if (memcmp(_content.lines[line],
+                   content.lines[line],
+                   DISPLAY_LINE_TEXT_CAPACITY) != 0)
+        {
+            memcpy(_content.lines[line],
+                   content.lines[line],
+                   DISPLAY_LINE_TEXT_CAPACITY);
+            _content.lines[line][DISPLAY_LINE_TEXT_CAPACITY - 1U] = '\0';
+            _dirty_lines |= static_cast<uint8_t>(1U << line);
+        }
     }
 }

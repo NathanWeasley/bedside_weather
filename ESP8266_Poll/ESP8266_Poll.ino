@@ -261,7 +261,8 @@ public:
             if (!_ntpStarted)
             {
                 DEBUG_PRINTF("[NTP] starting synchronization, timezone=%s\n", DEVICE_TIMEZONE);
-                configTime(0, 0, "ntp.aliyun.com", "ntp1.aliyun.com", "pool.ntp.org");
+                // 使用 POSIX 时区重载；数值型 configTime(0, 0, ...) 会把本地时区重置为 GMT。
+                configTime(DEVICE_TIMEZONE, "ntp.aliyun.com", "ntp1.aliyun.com", "pool.ntp.org");
                 _ntpStarted = true;
             }
 
@@ -613,9 +614,15 @@ private:
     void logCurrentTime() const
     {
         const time_t now = time(nullptr);
+        tm utc{};
         tm local{};
+        gmtime_r(&now, &utc);
         localtime_r(&now, &local);
-        DEBUG_PRINTF("[NTP] synchronized: %04d-%02d-%02d %02d:%02d:%02d, epoch=%lu\n",
+        DEBUG_PRINTF("[NTP] synchronized: timezone=%s, utc=%04d-%02d-%02d %02d:%02d:%02d, "
+                     "local=%04d-%02d-%02d %02d:%02d:%02d, epoch=%lu\n",
+                     DEVICE_TIMEZONE,
+                     utc.tm_year + 1900, utc.tm_mon + 1, utc.tm_mday,
+                     utc.tm_hour, utc.tm_min, utc.tm_sec,
                      local.tm_year + 1900, local.tm_mon + 1, local.tm_mday,
                      local.tm_hour, local.tm_min, local.tm_sec,
                      static_cast<unsigned long>(now));

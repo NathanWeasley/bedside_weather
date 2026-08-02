@@ -20,4 +20,4 @@
 #define API_MIN_REQUEST_INTERVAL_MS 1100U
 
 // 设为 1 时，调试信息从 Serial1（GPIO2，仅 TX）输出，不污染 MCU 协议串口。
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0

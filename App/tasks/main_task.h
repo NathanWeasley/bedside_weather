@@ -29,7 +29,7 @@ class MainTask
     uint32_t            _weather_request_ticks;
     uint32_t            _request_gap_ticks;
 
-    uint8_t             _last_display_second;
+    uint8_t             _last_display_minute;
     bool                _display_dirty;
 
     MainTask()
@@ -43,7 +43,7 @@ class MainTask
     , _datetime_request_ticks(0)
     , _weather_request_ticks(0)
     , _request_gap_ticks(0)
-    , _last_display_second(0xFFU)
+    , _last_display_minute(0xFFU)
     , _display_dirty(true)
     {}
     ~MainTask() = default;
@@ -63,7 +63,7 @@ public:
 private:
     bool send_request(bedside::McuRequest type);
     void service_requests();
-    void prepare_display_info();
+    void prepare_display_content();
 
     static void network_status_callback(const v1::Packet& packet);
     static void datetime_callback(const v1::Packet& packet);

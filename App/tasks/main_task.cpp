@@ -113,7 +113,80 @@ bool is_valid_weather(const bedside::WeatherResponse& response)
     return true;
 }
 
-DisplayWeatherIcon map_weather_icon(bedside::WeatherType weather)
+class TextBuilder
+{
+    char * _buffer;
+    uint8_t _capacity;
+    uint8_t _length;
+
+public:
+    TextBuilder(char * buffer, uint8_t capacity)
+    : _buffer(buffer)
+    , _capacity(capacity)
+    , _length(0U)
+    {
+        if (_capacity > 0U)
+        {
+            _buffer[0] = '\0';
+        }
+    }
+
+    void append(char value)
+    {
+        if ((_capacity == 0U) || (_length + 1U >= _capacity))
+        {
+            return;
+        }
+        _buffer[_length++] = value;
+        _buffer[_length] = '\0';
+    }
+
+    void append(const char * text)
+    {
+        while ((text != nullptr) && (*text != '\0'))
+        {
+            append(*text++);
+        }
+    }
+
+    void append_two_digits(uint8_t value)
+    {
+        append(static_cast<char>('0' + ((value / 10U) % 10U)));
+        append(static_cast<char>('0' + (value % 10U)));
+    }
+
+    void append_unsigned(uint32_t value)
+    {
+        char reversed[10];
+        uint8_t count = 0U;
+        do
+        {
+            reversed[count++] = static_cast<char>('0' + (value % 10U));
+            value /= 10U;
+        }
+        while ((value > 0U) && (count < sizeof(reversed)));
+
+        while (count > 0U)
+        {
+            append(reversed[--count]);
+        }
+    }
+
+    void append_temperature(int16_t temperature_x10)
+    {
+        int32_t value = temperature_x10;
+        if (value < 0)
+        {
+            append('-');
+            value = -value;
+        }
+        append_unsigned(static_cast<uint32_t>(value / 10));
+        append('.');
+        append(static_cast<char>('0' + (value % 10)));
+    }
+};
+
+const char * weather_label(bedside::WeatherType weather)
 {
     using bedside::WeatherType;
 
@@ -123,7 +196,7 @@ DisplayWeatherIcon map_weather_icon(bedside::WeatherType weather)
         case WeatherType::NIGHT_CLEAR:
         case WeatherType::DAY_FAIR:
         case WeatherType::NIGHT_FAIR:
-            return DisplayWeatherIcon::CLEAR;
+            return "SUN";
 
         case WeatherType::CLOUDY:
         case WeatherType::DAY_PARTLY_CLOUDY:
@@ -131,11 +204,11 @@ DisplayWeatherIcon map_weather_icon(bedside::WeatherType weather)
         case WeatherType::DAY_MOSTLY_CLOUDY:
         case WeatherType::NIGHT_MOSTLY_CLOUDY:
         case WeatherType::OVERCAST:
-            return DisplayWeatherIcon::CLOUDY;
+            return "CLOUD";
 
         case WeatherType::THUNDERSHOWER:
         case WeatherType::THUNDERSHOWER_WITH_HAIL:
-            return DisplayWeatherIcon::THUNDER;
+            return "THUNDER";
 
         case WeatherType::SHOWER:
         case WeatherType::LIGHT_RAIN:
@@ -145,7 +218,7 @@ DisplayWeatherIcon map_weather_icon(bedside::WeatherType weather)
         case WeatherType::HEAVY_STORM:
         case WeatherType::SEVERE_STORM:
         case WeatherType::ICE_RAIN:
-            return DisplayWeatherIcon::RAIN;
+            return "RAIN";
 
         case WeatherType::SLEET:
         case WeatherType::SNOW_FLURRY:
@@ -153,7 +226,7 @@ DisplayWeatherIcon map_weather_icon(bedside::WeatherType weather)
         case WeatherType::MODERATE_SNOW:
         case WeatherType::HEAVY_SNOW:
         case WeatherType::SNOWSTORM:
-            return DisplayWeatherIcon::SNOW;
+            return "SNOW";
 
         case WeatherType::DUST:
         case WeatherType::SAND:
@@ -161,21 +234,21 @@ DisplayWeatherIcon map_weather_icon(bedside::WeatherType weather)
         case WeatherType::SANDSTORM:
         case WeatherType::FOGGY:
         case WeatherType::HAZE:
-            return DisplayWeatherIcon::FOG_HAZE;
+            return "HAZE";
 
         case WeatherType::WINDY:
         case WeatherType::BLUSTERY:
         case WeatherType::HURRICANE:
         case WeatherType::TROPICAL_STORM:
         case WeatherType::TORNADO:
-            return DisplayWeatherIcon::WIND;
+            return "WIND";
 
         case WeatherType::HOT:
-            return DisplayWeatherIcon::HOT;
+            return "HOT";
         case WeatherType::COLD:
-            return DisplayWeatherIcon::COLD;
+            return "COLD";
         default:
-            return DisplayWeatherIcon::UNKNOWN;
+            return "UNKNOWN";
     }
 }
 
@@ -204,7 +277,7 @@ void MainTask::init()
     _datetime_request_ticks = INITIAL_REQUEST_DELAY_TICKS;
     _weather_request_ticks = INITIAL_REQUEST_DELAY_TICKS;
     _request_gap_ticks = 0U;
-    _last_display_second = 0xFFU;
+    _last_display_minute = 0xFFU;
     _display_dirty = true;
 }
 
@@ -217,16 +290,16 @@ void MainTask::tick()
     {
         date_time_t rtc_time = {};
         MX_RTC_Get(&rtc_time);
-        if (rtc_time.second != _last_display_second)
+        if (rtc_time.minute != _last_display_minute)
         {
-            _last_display_second = rtc_time.second;
+            _last_display_minute = rtc_time.minute;
             _display_dirty = true;
         }
     }
 
     if (_display_dirty)
     {
-        prepare_display_info();
+        prepare_display_content();
     }
 }
 
@@ -375,63 +448,98 @@ void MainTask::handle_weather(const v1::Packet& packet)
     _display_dirty = true;
 }
 
-void MainTask::prepare_display_info()
+void MainTask::prepare_display_content()
 {
-    DisplayInfo info = {};
-    info.weather_icon = DisplayWeatherIcon::UNKNOWN;
+    DisplayContent content = {};
+    TextBuilder network_line(content.lines[0], DISPLAY_LINE_TEXT_CAPACITY);
+    TextBuilder datetime_line(content.lines[1], DISPLAY_LINE_TEXT_CAPACITY);
+    TextBuilder weather_line(content.lines[2], DISPLAY_LINE_TEXT_CAPACITY);
 
-    if ((_response_valid_mask & RESPONSE_NETWORK_VALID) != 0U)
+    if ((_response_valid_mask & RESPONSE_NETWORK_VALID) == 0U)
     {
-        info.status |= DISPLAY_NETWORK_KNOWN;
-        if (_network_status.status != bedside::NetworkCondition::DISCONNECTED)
-        {
-            info.status |= DISPLAY_NETWORK_CONNECTED;
-        }
-        if (_network_status.status == bedside::NetworkCondition::HTTP_ERROR)
-        {
-            info.status |= DISPLAY_HTTP_ERROR;
-        }
+        network_line.append("NET ...");
+    }
+    else if (_network_status.status == bedside::NetworkCondition::DISCONNECTED)
+    {
+        network_line.append("NET OFF");
+    }
+    else if (_network_status.status == bedside::NetworkCondition::HTTP_ERROR)
+    {
+        network_line.append("HTTP ERR");
+    }
+    else
+    {
+        network_line.append("NET OK");
     }
 
     date_time_t rtc_time = {};
-    if (((_response_valid_mask & RESPONSE_DATETIME_VALID) != 0U) &&
-        (_datetime.status == 1U))
+    const bool time_valid =
+        ((_response_valid_mask & RESPONSE_DATETIME_VALID) != 0U) &&
+        (_datetime.status == 1U);
+    if (time_valid)
     {
         MX_RTC_Get(&rtc_time);
-        info.status |= DISPLAY_TIME_VALID;
-        info.hour = rtc_time.hour;
-        info.minute = rtc_time.minute;
+        datetime_line.append_two_digits(rtc_time.month);
+        datetime_line.append('-');
+        datetime_line.append_two_digits(rtc_time.day);
+        datetime_line.append(' ');
+        datetime_line.append_two_digits(rtc_time.hour);
+        datetime_line.append(':');
+        datetime_line.append_two_digits(rtc_time.minute);
+    }
+    else
+    {
+        datetime_line.append("TIME ...");
     }
 
-    if ((_response_valid_mask & RESPONSE_WEATHER_VALID) != 0U)
+    const bool weather_received =
+        (_response_valid_mask & RESPONSE_WEATHER_VALID) != 0U;
+    const bool weather_valid = weather_received &&
+        ((_weather.status & bedside::WEATHER_DAILY_VALID) != 0U) &&
+        (_weather.daily_count > 0U);
+
+    if (weather_valid)
     {
+        const bedside::DailyForecast& daily = _weather.daily[0];
+        weather_line.append('H');
+        weather_line.append_temperature(daily.temp_max_x10);
+        weather_line.append(" L");
+        weather_line.append_temperature(daily.temp_min_x10);
+        weather_line.append(' ');
+
+        const bool forecast_is_today = time_valid &&
+            (daily.year == static_cast<uint16_t>(2000U + rtc_time.year)) &&
+            (daily.month == rtc_time.month) &&
+            (daily.day == rtc_time.day);
+        const bool use_day_weather = !time_valid || !forecast_is_today ||
+            ((rtc_time.hour >= 6U) && (rtc_time.hour < 18U));
+        weather_line.append(weather_label(use_day_weather ?
+                                          daily.weather_day :
+                                          daily.weather_night));
+
         if ((_weather.status & bedside::WEATHER_STALE) != 0U)
         {
-            info.status |= DISPLAY_WEATHER_STALE;
+            weather_line.append(" OLD");
         }
         if ((_weather.status & (bedside::WEATHER_NETWORK_ERROR |
                                 bedside::WEATHER_HTTP_ERROR |
                                 bedside::WEATHER_JSON_ERROR)) != 0U)
         {
-            info.status |= DISPLAY_WEATHER_ERROR;
-        }
-
-        if (((_weather.status & bedside::WEATHER_DAILY_VALID) != 0U) &&
-            (_weather.daily_count > 0U))
-        {
-            const bedside::DailyForecast& daily = _weather.daily[0];
-            info.status |= DISPLAY_WEATHER_VALID;
-            info.temp_max_x10 = daily.temp_max_x10;
-            info.temp_min_x10 = daily.temp_min_x10;
-
-            const bool daytime = ((info.status & DISPLAY_TIME_VALID) == 0U) ||
-                                 ((info.hour >= 6U) && (info.hour < 18U));
-            info.weather_icon = map_weather_icon(daytime ?
-                                                 daily.weather_day :
-                                                 daily.weather_night);
+            weather_line.append(" ERR");
         }
     }
+    else if (weather_received &&
+             ((_weather.status & (bedside::WEATHER_NETWORK_ERROR |
+                                  bedside::WEATHER_HTTP_ERROR |
+                                  bedside::WEATHER_JSON_ERROR)) != 0U))
+    {
+        weather_line.append("WEATHER ERR");
+    }
+    else
+    {
+        weather_line.append("WEATHER ...");
+    }
 
-    DisplayTask::instance()->set_display_info(info);
+    DisplayTask::instance()->set_display_content(content);
     _display_dirty = false;
 }
