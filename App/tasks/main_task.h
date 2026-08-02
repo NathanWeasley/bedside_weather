@@ -31,6 +31,8 @@ class MainTask
 
     uint8_t             _last_display_minute;
     bool                _display_dirty;
+    uint32_t            _display_mode_ticks;
+    bool                _matrix_rain_active;
 
     MainTask()
     : Base(MAIN_TASK_PRESC)
@@ -45,6 +47,8 @@ class MainTask
     , _request_gap_ticks(0)
     , _last_display_minute(0xFFU)
     , _display_dirty(true)
+    , _display_mode_ticks(0U)
+    , _matrix_rain_active(true)
     {}
     ~MainTask() = default;
 
@@ -63,6 +67,7 @@ public:
 private:
     bool send_request(bedside::McuRequest type);
     void service_requests();
+    void service_display_mode();
     void prepare_display_content();
 
     static void network_status_callback(const v1::Packet& packet);

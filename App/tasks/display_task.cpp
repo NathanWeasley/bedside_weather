@@ -1,5 +1,6 @@
 #include "tasks/display_task.h"
 
+#include "graphics/animations/matrix_rain.hpp"
 #include "graphics/gfx_animated.hpp"
 #include "graphics/gfx_api.h"
 #include "graphics/gfx_paint.hpp"
@@ -38,6 +39,8 @@ using Screen = Display<LED_WIDTH, LED_HEIGHT, g_vram>;
 using NetworkZone = DisplayZone<NetworkView, Screen>;
 using DateTimeZone = DisplayZone<DateTimeView, Screen>;
 using WeatherZone = DisplayZone<WeatherView, Screen>;
+using MatrixRainView = animations::MatrixRainView;
+using MatrixRainZone = DisplayZone<MatrixRainView, Screen>;
 
 static NetworkView g_network_view;
 static DateTimeView g_datetime_view;
@@ -45,6 +48,20 @@ static WeatherView g_weather_view;
 static NetworkZone g_network_zone;
 static DateTimeZone g_datetime_zone;
 static WeatherZone g_weather_zone;
+static MatrixRainView g_matrix_rain_view;
+static MatrixRainZone g_matrix_rain_zone;
+
+template <typename ViewType, typename ZoneType>
+bool service_fullscreen_animation(ViewType& view, ZoneType& zone, bool reset)
+{
+    if (reset)
+    {
+        view.reset();
+        zone.update(view);
+        return true;
+    }
+    return zone.tick_then_update(view);
+}
 
 template <typename WindowType, typename ViewType, typename ZoneType>
 void render_line(const char * text, ViewType& view, ZoneType& zone)
@@ -83,6 +100,25 @@ void DisplayTask::init()
 
 void DisplayTask::tick()
 {
+    if (_mode == DisplayMode::MATRIX_RAIN)
+    {
+        const bool updated = service_fullscreen_animation(
+            g_matrix_rain_view, g_matrix_rain_zone, _mode_dirty);
+        _mode_dirty = false;
+        if (updated)
+        {
+            gfx_update_img(Screen::data());
+        }
+        return;
+    }
+
+    if (_mode_dirty)
+    {
+        memset(g_vram, 0, sizeof(g_vram));
+        _dirty_lines = (1U << DISPLAY_LINE_COUNT) - 1U;
+        _mode_dirty = false;
+    }
+
     bool updated = false;
 
     if ((_dirty_lines & (1U << 0)) != 0U)
@@ -128,4 +164,15 @@ void DisplayTask::set_display_content(const DisplayContent& content)
             _dirty_lines |= static_cast<uint8_t>(1U << line);
         }
     }
+}
+
+void DisplayTask::set_display_mode(DisplayMode mode)
+{
+    if (_mode == mode)
+    {
+        return;
+    }
+
+    _mode = mode;
+    _mode_dirty = true;
 }

@@ -17,6 +17,8 @@ constexpr uint32_t DATETIME_PERIOD_TICKS = 180000U;         // 有效时间每�
 constexpr uint32_t DATETIME_RETRY_TICKS = 1500U;            // 时间无效时每 30 秒重试
 constexpr uint32_t WEATHER_PERIOD_TICKS = 90000U;           // 有效天气每 30 分钟请求一次
 constexpr uint32_t WEATHER_RETRY_TICKS = 15000U;            // 无有效天气时每 5 分钟重试
+constexpr uint32_t MATRIX_RAIN_DURATION_TICKS = 1500U;       // 数字雨显示 30 秒
+constexpr uint32_t INFORMATION_DURATION_TICKS = 500U;        // 信息页显示 10 秒
 
 constexpr uint8_t WEATHER_KNOWN_STATUS_MASK =
     bedside::WEATHER_DAILY_VALID |
@@ -279,11 +281,15 @@ void MainTask::init()
     _request_gap_ticks = 0U;
     _last_display_minute = 0xFFU;
     _display_dirty = true;
+    _matrix_rain_active = true;
+    _display_mode_ticks = MATRIX_RAIN_DURATION_TICKS;
+    DisplayTask::instance()->set_display_mode(DisplayMode::MATRIX_RAIN);
 }
 
 void MainTask::tick()
 {
     service_requests();
+    service_display_mode();
 
     if (((_response_valid_mask & RESPONSE_DATETIME_VALID) != 0U) &&
         (_datetime.status == 1U))
@@ -300,6 +306,27 @@ void MainTask::tick()
     if (_display_dirty)
     {
         prepare_display_content();
+    }
+}
+
+void MainTask::service_display_mode()
+{
+    tick_down(_display_mode_ticks);
+    if (_display_mode_ticks != 0U)
+    {
+        return;
+    }
+
+    _matrix_rain_active = !_matrix_rain_active;
+    if (_matrix_rain_active)
+    {
+        _display_mode_ticks = MATRIX_RAIN_DURATION_TICKS;
+        DisplayTask::instance()->set_display_mode(DisplayMode::MATRIX_RAIN);
+    }
+    else
+    {
+        _display_mode_ticks = INFORMATION_DURATION_TICKS;
+        DisplayTask::instance()->set_display_mode(DisplayMode::INFORMATION);
     }
 }
 
